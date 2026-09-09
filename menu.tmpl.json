@@ -1,0 +1,23 @@
+{
+  "title": "music-tui",
+  "theme": "@THEME@",
+  "clamp_threshold": 10,
+  "sections": [
+    {
+      "title": "Settings",
+      "items": [
+        {
+          "key": "1",
+          "label": "Show resolved config + path checks",
+          "cmd": "bash \"$SELF/bin/show-config.sh\""
+        },
+        {
+          "key": "2",
+          "label": "Edit config ($EDITOR)",
+          "cmd": "${EDITOR:-vi} \"${XDG_CONFIG_HOME:-$HOME/.config}/music-tui/config\"",
+          "interactive": true
+        }
+      ]
+    }
+  ]
+}
