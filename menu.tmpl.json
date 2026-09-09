@@ -55,7 +55,7 @@
       ]
     },
     {
-      "title": "Lyrics — push uncommitted",
+      "title": "Lyrics — push to music dir / Drive",
       "items": [
         {
           "key": "1",
@@ -78,6 +78,24 @@
           "key": "4",
           "label": "Pick some → push to Google Drive — dry run",
           "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" list | fzf -m --prompt='to drive> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" to-drive --dry-run",
+          "interactive": true
+        },
+        {
+          "key": "5",
+          "label": "List recent lyrics commits (+ pushed-to-Drive status)",
+          "cmd": "python3 \"$SELF/bin/lyrics-push.py\" commits -n 5",
+          "use_fzf": true
+        },
+        {
+          "key": "6",
+          "label": "Pick past commits → push their lyrics to Google Drive",
+          "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" commits -n 5 | fzf -m --prompt='push commit> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" push-commits",
+          "interactive": true
+        },
+        {
+          "key": "7",
+          "label": "Pick past commits → push to Google Drive — dry run",
+          "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" commits -n 5 | fzf -m --prompt='push commit> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" push-commits --dry-run",
           "interactive": true
         }
       ]

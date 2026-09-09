@@ -33,7 +33,7 @@ dry-run (shows the resolved command), `t` for the theme, `0` to quit.
 |---|---|---|
 | 1 | Lyrics — sync & report | `lrc-sync` hand-timing, refresh the still-missing lists, browse them |
 | 2 | Lyrics — fetch from LRCLIB | plain `.txt` / synced `.lrc` / word-synced `.elrc`, whole tree or one sub-path |
-| 3 | Lyrics — push uncommitted | list what git hasn't committed, copy picks next to the mp3 or to Google Drive |
+| 3 | Lyrics — push | uncommitted lyrics → next to the mp3 or to Google Drive; or push a past commit's lyrics to Drive (with a pushed-commit ledger) |
 | 4 | Playlists & play-stats | regenerate `playlists/*.m3u` and `play_stats.csv` from Apple Music.app |
 | 5 | mpdtui DB — read | summary, browse by rating / mark / tag, orphan rows |
 | 6 | mpdtui DB — diff | vs the music library, vs `play_stats.csv` |

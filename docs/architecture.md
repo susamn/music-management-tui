@@ -52,7 +52,7 @@ is substituted; the `$VARS` in each `cmd` are expanded by the engine's
                                           ▼
    LRCLIB ──fetch-lyrics.py──►  music-metadata/lyrics/<rel>.{txt,lrc,elrc}
                                           ▲        │
-                       lrc-sync.py  ──────┘        │  lyrics-push.py  (uncommitted only)
+                       lrc-sync.py  ──────┘        │  lyrics-push.py  (uncommitted, or by commit)
                     (hand-time vs MPD)             ├──► $MUSIC_DIR/<rel>   (sidecar, for testing)
                                                    └──► $RCLONE_MUSIC_REMOTE_PATH/<rel>  (Drive)
 
@@ -72,7 +72,7 @@ is substituted; the `$VARS` in each `cmd` are expanded by the engine's
 | `play-stats-sync.py` + `extract.js` | `play-stats/` | Music.app | merged `play_stats.csv` | `$PLAY_STATS_CSV` |
 | `mpdtui.py` | new | `mpdtui.db` (+ library, + `play_stats.csv`) | reports / diffs / DB edits | `$MPDTUI_DB` / `$MUSIC_DIR` / `$PLAY_STATS_CSV` |
 | `mpdtui-db-backup.sh` | dotfiles, verbatim | `mpdtui.db` | rclone remote snapshot | `$MPDTUI_DB` |
-| `lyrics-push.py` | new | `git status` of `music-metadata/lyrics` | copies to `$MUSIC_DIR` / Drive | `$MUSIC_METADATA_DIR` / `$MUSIC_DIR` / `$RCLONE_MUSIC_REMOTE_PATH` |
+| `lyrics-push.py` | new | `git status` / recent commits of `music-metadata/lyrics` | copies to `$MUSIC_DIR` / Drive; appends `lyrics-reports/drive-push.log` | `$MUSIC_METADATA_DIR` / `$MUSIC_DIR` / `$RCLONE_MUSIC_REMOTE_PATH` |
 | `show-config.sh` | new | the config | resolved paths + existence checks | — |
 
 ## The engine
@@ -94,7 +94,7 @@ tools, not under `$TOOLS_PATH`.
 |---|---|---|
 | 1 Lyrics — sync & report | lrc-sync, refresh reports, browse missing | `lrc-sync.py`, `refresh-reports.py` |
 | 2 Lyrics — fetch from LRCLIB | plain / lrc / elrc / one sub-path | `fetch-lyrics.py` |
-| 3 Lyrics — push uncommitted | list, → music dir, → Drive (+ dry run) | `lyrics-push.py` |
+| 3 Lyrics — push | uncommitted → music dir / Drive; recent commits → Drive (ledger) | `lyrics-push.py` |
 | 4 Playlists & play-stats | playlist-sync live/dump/dry, play-stats live/dry | `playlist-sync.py`, `play-stats-sync.py` |
 | 5 mpdtui DB — read | summary, browse, 5★, orphans | `mpdtui.py` |
 | 6 mpdtui DB — diff | vs library, vs play_stats | `mpdtui.py` |

@@ -35,6 +35,34 @@ per file. Assumes rclone is configured and `RCLONE_MUSIC_REMOTE_PATH` in the
 config points at the music collection's base on the remote (default
 `gdrive:Media/Music`). `--dry-run` prints the commands and copies nothing.
 
+## 3·5 / 3·6 / 3·7 — push a past commit's lyrics to Drive
+
+```
+lyrics-push.py commits [-n 5]                         list, with pushed status
+lyrics-push.py commits | fzf -m | lyrics-push.py push-commits [--dry-run]
+```
+
+`commits` shows the last N commits that touched `lyrics/`, each tagged
+`[new]` or `[pushed <date>]`, with how many lyrics files it changed.
+`push-commits` takes the picked commits, collects every `.txt`/`.lrc`/`.elrc`
+they added or modified (the current working-tree version of each — a file
+deleted since is skipped), `rclone copyto`s them to Drive, and on success
+appends one line per commit to the **push ledger**.
+
+### The push ledger — `music-metadata/lyrics-reports/drive-push.log`
+
+Lives **in the music-metadata repo** so it travels with the data and is the
+same on every machine. One line per pushed commit:
+
+```
+<full-hash>	<iso timestamp>	<n files>	<commit subject>
+```
+
+`push-commits` only **appends** to it — it never commits. After a real push
+the file is dirty in music-metadata; commit it yourself (alongside the next
+lyrics commit, or on its own). A commit re-pushed just gets another line;
+`commits` shows the most recent push date.
+
 ## Bulk sync (not wired into the menu)
 
 To push **every** committed lyrics file to Drive in one shot, mirroring the
