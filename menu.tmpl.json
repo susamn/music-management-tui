@@ -55,6 +55,34 @@
       ]
     },
     {
+      "title": "Lyrics — push uncommitted",
+      "items": [
+        {
+          "key": "1",
+          "label": "List lyrics git hasn't committed yet",
+          "cmd": "python3 \"$SELF/bin/lyrics-push.py\" list"
+        },
+        {
+          "key": "2",
+          "label": "Pick some → copy next to the mp3 (for sync testing)",
+          "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" list | fzf -m --prompt='to music> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" to-music",
+          "interactive": true
+        },
+        {
+          "key": "3",
+          "label": "Pick some → push to Google Drive (rclone)",
+          "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" list | fzf -m --prompt='to drive> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" to-drive",
+          "interactive": true
+        },
+        {
+          "key": "4",
+          "label": "Pick some → push to Google Drive — dry run",
+          "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" list | fzf -m --prompt='to drive> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" to-drive --dry-run",
+          "interactive": true
+        }
+      ]
+    },
+    {
       "title": "Playlists & play-stats (Apple Music)",
       "items": [
         {
