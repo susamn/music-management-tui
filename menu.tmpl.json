@@ -4,6 +4,17 @@
   "clamp_threshold": 10,
   "sections": [
     {
+      "title": "Lyrics — sync & report",
+      "items": [
+        {
+          "key": "1",
+          "label": "lrc-sync — hand-time .txt into .lrc against MPD",
+          "cmd": "python3 \"$SELF/bin/lrc-sync.py\"",
+          "interactive": true
+        }
+      ]
+    },
+    {
       "title": "Settings",
       "items": [
         {
