@@ -11,6 +11,17 @@
           "label": "lrc-sync — hand-time .txt into .lrc against MPD",
           "cmd": "python3 \"$SELF/bin/lrc-sync.py\"",
           "interactive": true
+        },
+        {
+          "key": "2",
+          "label": "Refresh coverage reports (still-missing lists)",
+          "cmd": "python3 \"$SELF/bin/refresh-reports.py\""
+        },
+        {
+          "key": "3",
+          "label": "Browse still-missing songs",
+          "cmd": "cat \"$MUSIC_METADATA_DIR/lyrics-reports/still_missing_songs.txt\"",
+          "use_fzf": true
         }
       ]
     },
@@ -39,6 +50,41 @@
           "key": "4",
           "label": "Fetch .txt for one sub-path (prompts)",
           "cmd": "read -rp 'sub-path under music dir (e.g. adele/25): ' p && python3 \"$SELF/bin/fetch-lyrics.py\" --kind plain --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\" --only \"$p\"",
+          "interactive": true
+        }
+      ]
+    },
+    {
+      "title": "Playlists & play-stats (Apple Music)",
+      "items": [
+        {
+          "key": "1",
+          "label": "Playlist sync — live from Music.app",
+          "cmd": "python3 \"$SELF/bin/playlist-sync.py\"",
+          "interactive": true
+        },
+        {
+          "key": "2",
+          "label": "Playlist sync — from a saved dump (prompts)",
+          "cmd": "read -rp 'fetch.js dump path: ' f && python3 \"$SELF/bin/playlist-sync.py\" --from \"$f\"",
+          "interactive": true
+        },
+        {
+          "key": "3",
+          "label": "Playlist sync — dry run (live)",
+          "cmd": "python3 \"$SELF/bin/playlist-sync.py\" --dry-run",
+          "interactive": true
+        },
+        {
+          "key": "4",
+          "label": "Play-stats sync — live from Music.app",
+          "cmd": "python3 \"$SELF/bin/play-stats-sync.py\"",
+          "interactive": true
+        },
+        {
+          "key": "5",
+          "label": "Play-stats sync — dry run",
+          "cmd": "python3 \"$SELF/bin/play-stats-sync.py\" --dry-run",
           "interactive": true
         }
       ]
