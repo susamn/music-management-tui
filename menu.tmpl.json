@@ -90,6 +90,89 @@
       ]
     },
     {
+      "title": "mpdtui DB — read",
+      "items": [
+        {
+          "key": "1",
+          "label": "Summary (counts, marks, tags)",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" summary"
+        },
+        {
+          "key": "2",
+          "label": "Browse tracks (id, rating, marks, path)",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" list",
+          "use_fzf": true
+        },
+        {
+          "key": "3",
+          "label": "Browse 5★ tracks",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" list --min-rating 5",
+          "use_fzf": true
+        },
+        {
+          "key": "4",
+          "label": "Orphan rows (file gone)",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" orphans"
+        }
+      ]
+    },
+    {
+      "title": "mpdtui DB — diff",
+      "items": [
+        {
+          "key": "1",
+          "label": "vs music library (orphans / drift)",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" diff-library"
+        },
+        {
+          "key": "2",
+          "label": "vs play_stats.csv (ratings / play counts)",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" diff-stats"
+        }
+      ]
+    },
+    {
+      "title": "mpdtui DB — write (backup taken first)",
+      "items": [
+        {
+          "key": "1",
+          "label": "Backup DB to rclone remote",
+          "cmd": "bash \"$SELF/bin/mpdtui-db-backup.sh\" backup",
+          "interactive": true
+        },
+        {
+          "key": "2",
+          "label": "Restore DB from rclone remote",
+          "cmd": "bash \"$SELF/bin/mpdtui-db-backup.sh\" restore",
+          "interactive": true
+        },
+        {
+          "key": "3",
+          "label": "Add a mark to picked tracks",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" marks; read -rp 'mark id or name: ' m && python3 \"$SELF/bin/mpdtui.py\" list | fzf -m --prompt='mark> ' | python3 \"$SELF/bin/mpdtui.py\" mark --add \"$m\" --apply",
+          "interactive": true
+        },
+        {
+          "key": "4",
+          "label": "Add a tag to picked tracks",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" tags; read -rp 'tag name: ' t && python3 \"$SELF/bin/mpdtui.py\" list | fzf -m --prompt='tag> ' | python3 \"$SELF/bin/mpdtui.py\" tag --add \"$t\" --apply",
+          "interactive": true
+        },
+        {
+          "key": "5",
+          "label": "Import ratings from play_stats.csv",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" import-ratings --apply",
+          "interactive": true
+        },
+        {
+          "key": "6",
+          "label": "Prune orphan rows",
+          "cmd": "python3 \"$SELF/bin/mpdtui.py\" prune --apply",
+          "interactive": true
+        }
+      ]
+    },
+    {
       "title": "Settings",
       "items": [
         {
