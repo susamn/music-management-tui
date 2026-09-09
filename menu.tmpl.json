@@ -15,6 +15,35 @@
       ]
     },
     {
+      "title": "Lyrics — fetch from LRCLIB",
+      "items": [
+        {
+          "key": "1",
+          "label": "Fetch plain .txt for tracks missing it",
+          "cmd": "python3 \"$SELF/bin/fetch-lyrics.py\" --kind plain --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\"",
+          "interactive": true
+        },
+        {
+          "key": "2",
+          "label": "Fetch synced .lrc for tracks missing it",
+          "cmd": "python3 \"$SELF/bin/fetch-lyrics.py\" --kind lrc --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\"",
+          "interactive": true
+        },
+        {
+          "key": "3",
+          "label": "Fetch word-synced .elrc (A2) where available",
+          "cmd": "python3 \"$SELF/bin/fetch-lyrics.py\" --kind elrc --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\"",
+          "interactive": true
+        },
+        {
+          "key": "4",
+          "label": "Fetch .txt for one sub-path (prompts)",
+          "cmd": "read -rp 'sub-path under music dir (e.g. adele/25): ' p && python3 \"$SELF/bin/fetch-lyrics.py\" --kind plain --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\" --only \"$p\"",
+          "interactive": true
+        }
+      ]
+    },
+    {
       "title": "Settings",
       "items": [
         {
