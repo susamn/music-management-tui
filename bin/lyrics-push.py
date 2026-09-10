@@ -67,8 +67,11 @@ def metadata_dir():
 
 
 def uncommitted_lyrics(repo):
+    # -uall so a brand-new directory is listed file-by-file, not collapsed to
+    # one "lyrics/newdir/" entry (which would fail the extension filter).
     out = subprocess.run(
-        ["git", "-C", str(repo), "status", "--porcelain", "-z", "--", "lyrics"],
+        ["git", "-C", str(repo), "status", "--porcelain", "-z",
+         "--untracked-files=all", "--", "lyrics"],
         capture_output=True, text=True, check=True).stdout
     rels = []
     for entry in out.split("\0"):
