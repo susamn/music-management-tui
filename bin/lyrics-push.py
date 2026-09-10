@@ -43,6 +43,19 @@ def die(msg, code=2):
     sys.exit(code)
 
 
+def ask(msg):
+    """Prompt on the terminal even when stdin is a pipe (fzf selection)."""
+    try:
+        if sys.stdin.isatty():
+            return input(msg)
+        with open("/dev/tty", "r") as tty:
+            sys.stderr.write(msg)
+            sys.stderr.flush()
+            return tty.readline()
+    except (OSError, EOFError):
+        return ""
+
+
 def metadata_dir():
     d = os.environ.get("MUSIC_METADATA_DIR")
     if not d:
@@ -183,7 +196,7 @@ def cmd_to_music(args):
     if not todo:
         return
     if overwrite and not args.yes:
-        if input(f"\noverwrite {len(overwrite)} existing sidecar(s)? [y/N] ").strip().lower() != "y":
+        if ask(f"\noverwrite {len(overwrite)} existing sidecar(s)? [y/N] ").strip().lower() != "y":
             print("nothing copied"); return
 
     n = 0

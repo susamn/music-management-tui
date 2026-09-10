@@ -273,7 +273,18 @@ def cmd_diff_stats(con, args):
 def _confirm(msg, args):
     if args.yes:
         return True
-    return input(f"{msg} [y/N] ").strip().lower() == "y"
+    # stdin is usually the piped id-list here, so prompt on the terminal.
+    try:
+        if sys.stdin.isatty():
+            resp = input(f"{msg} [y/N] ")
+        else:
+            with open("/dev/tty", "r") as tty:
+                sys.stderr.write(f"{msg} [y/N] ")
+                sys.stderr.flush()
+                resp = tty.readline()
+    except (OSError, EOFError):
+        return False
+    return resp.strip().lower() == "y"
 
 
 def _catalog_id(con, kind, token, create=False):
