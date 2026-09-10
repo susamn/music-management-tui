@@ -143,9 +143,24 @@ Sync view:
 | `space`   | Restart the track at 0:00 (real MPD seek+play), zero the clock, and stamp the landing line — together. |
 | `n`       | Move onto the next line and stamp it at the current clock position — i.e. the moment you *enter* it. |
 | `↑` / `↓` (or `k` / `j`) | Move the cursor **without** stamping — use this to park on the line where you want to resume, then press `n`. |
+| `h` / `l` | Seek the song **−5s / +5s** (the internal clock moves with it, so stamping stays aligned). |
+| `H` / `L` | Seek **−15s / +15s**. Step sizes are `SEEK_SMALL` / `SEEK_BIG` at the top of `lrc-sync.py`. |
+| `g`       | Seek the song to the **current cursor line's own timestamp** and start playing there — to re-check or re-time one line without replaying from 0:00. No-op if that line isn't stamped. |
 | `b`       | Undo: clear the current line's timestamp and step back to it (fix a fumble, then re-enter it with `n`). |
 | `s`       | **Save now.** Writes an `.lrc` with the lines stamped so far.    |
 | `Esc`     | Leave the sync view. Nothing is written, but the timing so far is kept (see Resume). |
+
+### Seeking / fixing one line
+
+`h` `l` `H` `L` scrub the song back and forward while you sync — the self-run
+clock is shifted by the same amount, so a stamp you take after seeking still
+lands where it should. Seeking does **not** move the line cursor; use `↑`/`↓`
+for that.
+
+To fix a single bad line in a pass (or in an existing `.lrc` you're
+optimising): `↑`/`↓` to the line *before* the wrong one, press `g` to jump the
+song to that line's timestamp, then `n` when the next line actually starts —
+the new stamp overwrites the old one. Everything else keeps its timing.
 
 ### Resume
 

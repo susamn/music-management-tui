@@ -18,6 +18,8 @@ Flow (see README.md):
   * The sync always opens with a blank landing line before line 1 (added only
     if the .txt doesn't already start with one) - a slot to press 'n' on for
     the song's intro, so the first real lyric doesn't inherit that gap.
+  * [h]/[l] seek -/+5s, [H]/[L] -/+15s (clock shifts with the audio). [g]
+    seeks to the cursor line's own stamp, to redo one line without a full pass.
   * During a sync the track is pinned: MPD is set to stop at end of song
     (single on) and, as a belt-and-suspenders, the tool force-stops MPD the
     moment it ever detects a different song became current. Prior
@@ -62,6 +64,9 @@ AUDIO_EXTS = {".mp3", ".m4a", ".flac", ".ogg", ".opus", ".wav", ".wma", ".aac", 
 # time to hearing it. Subtract a fixed amount to pull the stamp back towards
 # the true onset. Tune this if your own reaction time runs faster/slower.
 STAMP_OFFSET = 0.5
+# Seek step sizes for h/l (small) and H/L (big), in seconds.
+SEEK_SMALL = 5.0
+SEEK_BIG = 15.0
 
 
 # --------------------------------------------------------------------------- MPD
@@ -301,6 +306,23 @@ def sync_screen(stdscr, mpd, rel):
         # 0:00 right away, no separate 'n' needed for line 0.
         times[0] = 0.0
 
+    def seek_to(target):
+        # Move both the audio and the internal clock to `target` seconds.
+        # The clock is authoritative for stamping, so we shift clock_t0 by
+        # exactly the change in position() - MPD's resulting elapsed may
+        # differ slightly and that's fine, same as everywhere else here.
+        nonlocal clock_t0
+        if clock_t0 is None:
+            return None
+        old = position()
+        new = max(0.0, target)
+        try:
+            mpd.cmd(f"seekcur {new:.2f}")
+        except MPDError:
+            pass
+        clock_t0 -= (new - old)
+        return new
+
     stdscr.nodelay(True)
     result = "Aborted - nothing saved."
     try:
@@ -349,9 +371,12 @@ def sync_screen(stdscr, mpd, rel):
                     "[space] restart+zero clock  [n] enter next line  [↑/↓] move  "
                     "[b] undo  [s] save  [ESC] leave",
                     curses.A_DIM)
-            addline(stdscr, 3, 0, hint, curses.A_DIM)
+            addline(stdscr, 3, 0,
+                    "[h/l] seek ∓5s   [H/L] seek ∓15s   [g] seek to this line's stamp",
+                    curses.A_DIM)
+            addline(stdscr, 4, 0, hint, curses.A_DIM)
 
-            top = 5
+            top = 6
             vis = max(1, h - top - 1)
             start = max(0, min(cur - vis // 2, len(lines) - vis))
             for row, i in enumerate(range(start, min(len(lines), start + vis))):
@@ -402,6 +427,29 @@ def sync_screen(stdscr, mpd, rel):
             elif ch in (curses.KEY_UP, ord("k")):
                 cur = max(cur - 1, 0)
                 remember()
+            elif ch in (ord("h"), ord("l"), ord("H"), ord("L")):
+                step = SEEK_BIG if ch in (ord("H"), ord("L")) else SEEK_SMALL
+                delta = -step if ch in (ord("h"), ord("H")) else step
+                if clock_t0 is None:
+                    hint = "Start the clock ([space]) before seeking."
+                else:
+                    new = seek_to(position() + delta)
+                    hint = f"seek {'-' if delta < 0 else '+'}{abs(delta):.0f}s -> {fmt_time(new)}"
+            elif ch in (ord("g"), ord("G")):
+                # Jump the song to where the cursor line is stamped, to
+                # re-check / re-time that one line without replaying from 0:00.
+                if clock_t0 is None:
+                    hint = "Start the clock ([space]) first."
+                elif times[cur] is None:
+                    hint = "This line has no stamp to jump to."
+                else:
+                    if pinned_id is not None:
+                        try:
+                            mpd.cmd(f"playid {pinned_id}")
+                        except MPDError:
+                            pass
+                    new = seek_to(times[cur])
+                    hint = f"jumped to line {cur + 1} @ {fmt_time(new)}"
             elif ch in (ord("b"), ord("B"), curses.KEY_BACKSPACE, 127, 8):
                 # Undo the most recent entry: clear the line you're currently
                 # on (the one 'n' just stamped) and step back to redo it.
