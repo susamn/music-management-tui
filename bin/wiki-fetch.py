@@ -746,6 +746,17 @@ def tag(tags, *names):
     return ""
 
 
+def prune_empty(leaf, stop):
+    """Remove leaf and any parents it emptied, never climbing past stop."""
+    d = leaf
+    while d != stop and stop in d.parents:
+        try:
+            d.rmdir()
+        except OSError:      # not empty, or gone already -- either way, stop
+            return
+        d = d.parent
+
+
 def iter_tracks(music_dir, only):
     base = music_dir / only if only else music_dir
     if not base.exists():
@@ -759,7 +770,9 @@ def main():
     conf = load_config()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--music", default=conf.get("MUSIC_DIR"), help="music library root")
-    ap.add_argument("--wiki", default=conf.get("WIKI_DIR"), help="wiki collection root")
+    ap.add_argument("--wiki", default=None, help="wiki collection root")
+    ap.add_argument("--reports", default=None,
+                    help="where no-data.txt lives (default: beside --wiki)")
     ap.add_argument("--only", default="", help="restrict to a subtree, e.g. sade/the-essential-rnb")
     ap.add_argument("--limit", type=int, default=int(cfg(conf, "WIKI_BATCH") or 100),
                     help="tracks to fetch this run (0 = no limit)")
@@ -772,8 +785,17 @@ def main():
     if not args.music:
         sys.exit("set MUSIC_DIR in ~/.config/music-tui/config, or pass --music")
     music = expand(args.music)
-    wiki = expand(args.wiki) if args.wiki else expand(conf.get("MUSIC_METADATA_DIR", "~")) / "wiki"
-    reports = expand(conf.get("WIKI_REPORTS_DIR") or (wiki.parent / "wiki-reports"))
+
+    # --wiki carries the reports dir with it. They are one collection: pointing
+    # the wiki somewhere else for a trial run and still appending "skip this
+    # track" to the real repo means a throwaway run quietly teaches the real
+    # one to skip tracks it never actually wrote anywhere.
+    if args.wiki:
+        wiki = expand(args.wiki)
+        reports = expand(args.reports) if args.reports else wiki.parent / "wiki-reports"
+    else:
+        wiki = expand(conf.get("WIKI_DIR") or (expand(conf.get("MUSIC_METADATA_DIR", "~")) / "wiki"))
+        reports = expand(args.reports or conf.get("WIKI_REPORTS_DIR") or (wiki.parent / "wiki-reports"))
     no_data_file = reports / "no-data.txt"
     no_data = set()
     if no_data_file.is_file() and not args.retry_missing:
@@ -826,11 +848,11 @@ def main():
             log("    - nothing found")
             fresh_no_data.append(str(rel.with_suffix("")))
             empty += 1
-            # Leave no empty directory behind to be mistaken for a fetched track.
-            try:
-                dest.rmdir()
-            except OSError:
-                pass
+            # Leave no empty directory behind to be mistaken for a fetched
+            # track -- nor the album and artist directories that making it
+            # created, or an album nobody has a single story for still looks
+            # like a fetched album.
+            prune_empty(dest, wiki)
             continue
 
         doc["track"]["file"] = str(rel)

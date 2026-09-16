@@ -72,6 +72,13 @@ Resuming needs no bookkeeping: a track with a `wiki.json` is skipped. A track
 **no source knew anything about** is recorded in `$WIKI_REPORTS_DIR/no-data.txt`
 and skipped on later sweeps too, so a hundred-track run is a hundred *new*
 tracks rather than the same failures again — `--retry-missing` tries them anyway.
+Nothing is left on disk for such a track, not even the album directory the
+attempt created.
+
+`--wiki` carries the reports directory with it (override with `--reports`).
+They are one collection: pointing the wiki somewhere else for a trial run while
+still appending "skip this track" to the real repo would let a throwaway run
+quietly teach the real one to skip tracks it never wrote anywhere.
 
 ### Matching, and getting it wrong
 
