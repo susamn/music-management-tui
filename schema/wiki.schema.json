@@ -1,0 +1,355 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/susamn/music-management-tui/schema/wiki.schema.json",
+  "title": "mpdtui track wiki",
+  "description": "One track's story, fetched ahead of time and read offline by mpdtui's story modal. Lives at <track-dir>/wiki.json, beside the images it names.",
+  "type": "object",
+  "required": [
+    "schema",
+    "track",
+    "fetched_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1,
+      "description": "Schema version. Bumped only on a breaking change; readers must refuse a version they do not know rather than guess."
+    },
+    "track": {
+      "type": "object",
+      "description": "Who this file is about. Carried in the file itself so a directory that ends up in the wrong place can be detected instead of silently shown against another track.",
+      "required": [
+        "title",
+        "artist"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Library-relative path of the audio file, e.g. sade/the-essential-rnb/01-smooth-operator.mp3. The directory holding this wiki.json is named after this file's basename without its extension."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artist": {
+          "type": "string",
+          "minLength": 1
+        },
+        "album": {
+          "type": "string"
+        },
+        "year": {
+          "type": "string",
+          "pattern": "^[0-9]{4}$"
+        },
+        "mbid": {
+          "type": "object",
+          "description": "MusicBrainz IDs, when the fetcher resolved them. Optional, but they make a re-fetch exact instead of another fuzzy search.",
+          "additionalProperties": false,
+          "properties": {
+            "recording": {
+              "type": "string"
+            },
+            "release": {
+              "type": "string"
+            },
+            "artist": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 UTC timestamp of the fetch. The modal shows it so stale text is recognisable as stale."
+    },
+    "story": {
+      "type": "object",
+      "description": "The main narrative. summary is what the modal opens on; sections are the rest, shown in order.",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "One or two paragraphs. Shown first, before any section."
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prose"
+          }
+        }
+      }
+    },
+    "behind_the_scenes": {
+      "type": "array",
+      "description": "Recording, production, sampling, session players, studio anecdotes -- how it got made, as opposed to what it is.",
+      "items": {
+        "$ref": "#/$defs/prose"
+      }
+    },
+    "bootlegs": {
+      "type": "array",
+      "description": "Unofficial live recordings, alternate takes, radio sessions. One entry per known recording.",
+      "items": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "description": "YYYY, YYYY-MM or YYYY-MM-DD -- whatever precision is actually known."
+          },
+          "venue": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "description": "Free text: \"12\\\" Vinyl\", \"FM broadcast\", \"audience recording\"."
+          },
+          "notes": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "images": {
+      "type": "array",
+      "description": "Every image file in this directory, in display order. See docs/wiki.md for the filename convention -- the name carries the role so a reader can still group images with no manifest at all, and this array adds the caption and credit it cannot infer.",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "role"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^(cover|artist|scene-[0-9]{2}|bootleg-[0-9]{2}|extra-[0-9]{2})\\.(jpg|jpeg|png|webp)$",
+            "description": "Filename only -- no path. The directory is flat; subdirectories are not read."
+          },
+          "role": {
+            "enum": [
+              "cover",
+              "artist",
+              "scene",
+              "bootleg",
+              "extra"
+            ],
+            "description": "Must agree with the filename's prefix."
+          },
+          "caption": {
+            "type": "string"
+          },
+          "credit": {
+            "type": "string",
+            "description": "Photographer, label, or rights holder, when known."
+          },
+          "source": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Where it was fetched from, for re-fetching -- not used for display."
+          }
+        },
+        "description": "One image. The allOf below ties role to the filename prefix: the two carry the same fact, and a reader that trusts either one must not be able to find them disagreeing.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "role": {
+                  "const": "cover"
+                }
+              },
+              "required": [
+                "role"
+              ]
+            },
+            "then": {
+              "properties": {
+                "file": {
+                  "pattern": "^cover\\."
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "role": {
+                  "const": "artist"
+                }
+              },
+              "required": [
+                "role"
+              ]
+            },
+            "then": {
+              "properties": {
+                "file": {
+                  "pattern": "^artist\\."
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "role": {
+                  "const": "scene"
+                }
+              },
+              "required": [
+                "role"
+              ]
+            },
+            "then": {
+              "properties": {
+                "file": {
+                  "pattern": "^scene-[0-9]{2}\\."
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "role": {
+                  "const": "bootleg"
+                }
+              },
+              "required": [
+                "role"
+              ]
+            },
+            "then": {
+              "properties": {
+                "file": {
+                  "pattern": "^bootleg-[0-9]{2}\\."
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "role": {
+                  "const": "extra"
+                }
+              },
+              "required": [
+                "role"
+              ]
+            },
+            "then": {
+              "properties": {
+                "file": {
+                  "pattern": "^extra-[0-9]{2}\\."
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "links": {
+      "type": "array",
+      "description": "Further reading, listed at the end of the modal.",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "url"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "description": "Provenance for the whole file, one entry per service consulted. Separate from the per-section source field: attribution obligations (CC BY-SA in particular) are per source, not per paragraph.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "license": {
+            "type": "string",
+            "description": "e.g. \"CC BY-SA 4.0\". Shown in the modal's footer where present."
+          },
+          "fetched_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "prose": {
+      "type": "object",
+      "description": "A headed block of plain text. Body is never HTML or Markdown: the modal renders it as-is, wrapping to the terminal, with a blank line between paragraphs.",
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "heading": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "description": "Service this paragraph came from, shown small beside the heading."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    }
+  }
+}

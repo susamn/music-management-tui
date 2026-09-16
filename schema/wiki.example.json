@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "track": {
+    "file": "sade/the-essential-rnb/01-smooth-operator.mp3",
+    "title": "Smooth Operator",
+    "artist": "Sade",
+    "album": "The Essential R&B",
+    "year": "1984",
+    "mbid": {
+      "recording": "a2241285-64e4-4101-9efb-0c602cb8b4e4",
+      "artist": "67930b3e-e00b-469f-8c74-fd69f20522ec"
+    }
+  },
+  "fetched_at": "2026-09-16T20:55:00Z",
+
+  "story": {
+    "summary": "Written by Sade Adu and Ray St. John before the band signed, \"Smooth Operator\" became the song that carried Diamond Life out of the London club circuit and onto American radio.\n\nThe lyric follows a charming, rootless con man across a string of cities, and the arrangement keeps its distance from him -- no chorus hook to sing along to, just the horn line circling back.",
+    "sections": [
+      {
+        "heading": "Writing",
+        "body": "St. John and Adu wrote the song around 1982, while Adu was still working as a backing singer in the band Pride. It predates Sade the band, and was already a fixture of their live set before Epic signed them.",
+        "source": "Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Smooth_Operator"
+      }
+    ]
+  },
+
+  "behind_the_scenes": [
+    {
+      "heading": "The single edit",
+      "body": "The album runs past four and a half minutes and opens on a long instrumental introduction. Radio wanted neither, so the 7\" drops the intro outright -- which is why the single and the album version start on completely different bars.",
+      "source": "Discogs",
+      "url": "https://www.discogs.com/master/22860"
+    }
+  ],
+
+  "bootlegs": [
+    {
+      "title": "Making Hearts Ache: The Hammersmith Odeon Broadcast",
+      "date": "1984-11-09",
+      "venue": "Hammersmith Odeon",
+      "city": "London",
+      "format": "12\" Vinyl",
+      "notes": "FM broadcast of the Diamond Life tour, pressed unofficially. Track B5.",
+      "source": "MusicBrainz",
+      "url": "https://musicbrainz.org/release/498a9a5a-195f-4c47-b13e-ba1586a00f46"
+    }
+  ],
+
+  "images": [
+    {
+      "file": "cover.jpg",
+      "role": "cover",
+      "caption": "1984 UK 7\" sleeve",
+      "credit": "Epic Records",
+      "source": "MusicBrainz Cover Art Archive",
+      "url": "https://coverartarchive.org/release/498a9a5a-195f-4c47-b13e-ba1586a00f46/front"
+    },
+    {
+      "file": "artist.jpg",
+      "role": "artist",
+      "caption": "Sade Adu, 1984",
+      "credit": "Photographer unknown"
+    },
+    {
+      "file": "scene-01.jpg",
+      "role": "scene",
+      "caption": "Recording at The Power Plant, London"
+    }
+  ],
+
+  "links": [
+    {"label": "Wikipedia", "url": "https://en.wikipedia.org/wiki/Smooth_Operator"},
+    {"label": "MusicBrainz", "url": "https://musicbrainz.org/recording/a2241285-64e4-4101-9efb-0c602cb8b4e4"}
+  ],
+
+  "sources": [
+    {
+      "name": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Smooth_Operator",
+      "license": "CC BY-SA 4.0",
+      "fetched_at": "2026-09-16T20:55:00Z"
+    },
+    {
+      "name": "MusicBrainz",
+      "url": "https://musicbrainz.org/recording/a2241285-64e4-4101-9efb-0c602cb8b4e4",
+      "license": "CC0",
+      "fetched_at": "2026-09-16T20:55:00Z"
+    }
+  ]
+}
