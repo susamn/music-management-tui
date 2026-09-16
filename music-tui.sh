@@ -58,6 +58,17 @@ if add:
     print("music-tui: added config keys to %s: %s" % (conf, ", ".join(keys)), file=sys.stderr)
 MERGE_PY
 # --- load config -------------------------------------------------------------
+# A value containing spaces or shell metacharacters -- ( ) $ " among them --
+# has to be quoted, because this file is sourced rather than parsed. Checking
+# first turns "syntax error near unexpected token" from bash into a line number
+# and an explanation.
+if ! bash -n "$CONF" 2>/dev/null; then
+  echo "music-tui: $CONF is not valid shell. A value with spaces or characters" >&2
+  echo "           like ( ) \$ \" needs quoting, e.g. KEY=\"a value (here)\"" >&2
+  bash -n "$CONF" || true
+  exit 1
+fi
+
 # shellcheck disable=SC1090
 source "$CONF"
 

@@ -40,7 +40,7 @@ WIKI_BATCH=100
 # Wikipedia language edition, and the User-Agent every request carries.
 # MusicBrainz rejects requests without a descriptive one.
 WIKI_LANG=en
-WIKI_USER_AGENT=music-tui/1.0 ( https://github.com/susamn )
+WIKI_USER_AGENT="music-tui/1.0 ( https://github.com/susamn )"
 
 # Service endpoints. Here so they can be repointed (mirror, proxy, API version
 # bump) without touching the script.

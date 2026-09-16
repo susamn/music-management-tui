@@ -81,7 +81,14 @@ def load_config():
             if not line or line.startswith("#") or "=" not in line:
                 continue
             k, _, v = line.partition("=")
-            conf[k.strip()] = v.strip()
+            v = v.strip()
+            # The file is sourced by bash, so a value containing shell
+            # metacharacters -- the User-Agent's parentheses, above all -- has
+            # to be quoted there. Those quotes are shell syntax, not part of
+            # the value.
+            if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+                v = v[1:-1]
+            conf[k.strip()] = v
     conf.update({k: v for k, v in os.environ.items() if k in CONFIG_KEYS and v})
     return conf
 
