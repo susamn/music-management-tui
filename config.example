@@ -23,3 +23,40 @@ RCLONE_MUSIC_REMOTE_PATH=gdrive:Media/Music
 
 # TUI theme: obsidian | dracula | nord | cyberpunk | emerald
 THEME=obsidian
+
+# --- wiki (track stories) -----------------------------------------------------
+# Per-track background fetched by bin/wiki-fetch.py and read offline by mpdtui.
+# Mirrors the library one level deeper than lyrics/: <artist>/<album>/<track>/.
+WIKI_DIR=~/Music/music-metadata/wiki
+
+# Where a sweep records tracks no source knew anything about, so later runs skip
+# them (bin/wiki-fetch.py --retry-missing to try again anyway).
+WIKI_REPORTS_DIR=~/Music/music-metadata/wiki-reports
+
+# Tracks per sweep. One run is meant to be a known quantity of network traffic;
+# run it again for the next batch.
+WIKI_BATCH=100
+
+# Wikipedia language edition, and the User-Agent every request carries.
+# MusicBrainz rejects requests without a descriptive one.
+WIKI_LANG=en
+WIKI_USER_AGENT=music-tui/1.0 ( https://github.com/susamn )
+
+# Service endpoints. Here so they can be repointed (mirror, proxy, API version
+# bump) without touching the script.
+MUSICBRAINZ_API=https://musicbrainz.org/ws/2
+COVERART_API=https://coverartarchive.org
+WIKIPEDIA_API=https://{lang}.wikipedia.org
+LASTFM_API=https://ws.audioscrobbler.com/2.0/
+GENIUS_API=https://api.genius.com
+DISCOGS_API=https://api.discogs.com
+
+# Optional API credentials. Leave blank and that source is skipped -- the
+# fallback chain moves on, and MusicBrainz / Wikipedia / Cover Art Archive
+# still work with no keys at all.
+#   Last.fm  https://www.last.fm/api/account/create
+#   Genius   https://genius.com/api-clients        (client access token)
+#   Discogs  https://www.discogs.com/settings/developers  (personal token)
+LASTFM_API_KEY=
+GENIUS_TOKEN=
+DISCOGS_TOKEN=

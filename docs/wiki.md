@@ -38,6 +38,80 @@ wiki/<artist>/<album>/<track>/        ->   MUSIC_DIR/<artist>/<album>/wiki/<trac
 That is `dirname` + `wiki/` + `basename`, which is the only place the two trees
 differ. Unlike lyrics, this is not a straight relative-path copy.
 
+## Fetching
+
+`bin/wiki-fetch.py` — menu **4·1–4·4**. Stdlib only; needs `ffprobe` on PATH.
+
+Every field falls down a chain of sources and takes the **first that has
+anything**. Nothing is merged, so a field always has exactly one provenance and
+the file can never end up quoting two services against each other:
+
+```
+story              wikipedia -> lastfm -> genius -> discogs -> wikipedia (artist)
+behind_the_scenes  genius (credits) -> discogs (release notes)
+bootlegs           musicbrainz
+images             coverartarchive -> lastfm -> genius
+```
+
+A source with no API key configured is skipped and the chain moves on, so a
+machine with no keys at all still gets MusicBrainz, Wikipedia and Cover Art
+Archive.
+
+### Batches
+
+A run takes `--limit` tracks (default `$WIKI_BATCH`, 100) and stops, so one run
+is a known quantity of network traffic. Run it again for the next batch:
+
+```bash
+bin/wiki-fetch.py --dry-run          # what the next batch would be
+bin/wiki-fetch.py                    # fetch it
+bin/wiki-fetch.py --only sade        # restrict to a subtree
+```
+
+Resuming needs no bookkeeping: a track with a `wiki.json` is skipped. A track
+**no source knew anything about** is recorded in `$WIKI_REPORTS_DIR/no-data.txt`
+and skipped on later sweeps too, so a hundred-track run is a hundred *new*
+tracks rather than the same failures again — `--retry-missing` tries them anyway.
+
+### Matching, and getting it wrong
+
+MPD carries no MusicBrainz ids, so every lookup starts from the artist/album/
+title tags and is a fuzzy search. Three guards keep a bad match out:
+
+- MusicBrainz results below a score of 85 are dropped.
+- A Wikipedia article is accepted only if its text names the artist — which is
+  what stops `Smooth Operator` landing on the disambiguation page.
+- A Genius hit is accepted only if its primary artist overlaps the tag.
+
+They are not perfect. A wrong story is a wrong `wiki.json`: delete the directory
+and the next sweep picks the track up again.
+
+### Rate limits
+
+MusicBrainz documents one request per second and answers a sustained sweep with
+`503` regardless; those are retried with a widening pause rather than treated as
+"no data", since otherwise a long run quietly loses most of its bootlegs and
+cover art. Requests are throttled per host, so a chain touching four services is
+not serialised behind the slowest one's limit.
+
+Every request carries `$WIKI_USER_AGENT`. MusicBrainz **rejects** a generic one
+— that is what a sudden wall of 503s with no retries means.
+
+### Config
+
+Added to `~/.config/music-tui/config` (`config.example` is the template; an
+existing config gains new keys on the next `music-tui.sh` run):
+
+| Key | |
+|---|---|
+| `WIKI_DIR` | the wiki collection, default `$MUSIC_METADATA_DIR/wiki` |
+| `WIKI_REPORTS_DIR` | where `no-data.txt` lives |
+| `WIKI_BATCH` | tracks per run (100) |
+| `WIKI_LANG` | Wikipedia language edition (`en`) |
+| `WIKI_USER_AGENT` | sent on every request |
+| `MUSICBRAINZ_API` etc. | endpoints, so they can be repointed without touching the script |
+| `LASTFM_API_KEY`, `GENIUS_TOKEN`, `DISCOGS_TOKEN` | optional; blank disables that source |
+
 ## wiki.json
 
 Validated by `schema/wiki.schema.json` (JSON Schema draft 2020-12);

@@ -101,6 +101,35 @@
       ]
     },
     {
+      "title": "Wiki — track stories",
+      "items": [
+        {
+          "key": "1",
+          "label": "Preview the next batch (dry run, no network writes)",
+          "cmd": "python3 \"$SELF/bin/wiki-fetch.py\" --dry-run",
+          "interactive": true
+        },
+        {
+          "key": "2",
+          "label": "Fetch the next batch ($WIKI_BATCH tracks)",
+          "cmd": "python3 \"$SELF/bin/wiki-fetch.py\"",
+          "interactive": true
+        },
+        {
+          "key": "3",
+          "label": "Fetch one sub-path (prompts)",
+          "cmd": "read -rp 'sub-path under music dir (e.g. sade/the-best-of-sade): ' p && python3 \"$SELF/bin/wiki-fetch.py\" --only \"$p\"",
+          "interactive": true
+        },
+        {
+          "key": "4",
+          "label": "Retry tracks previously found to have no data",
+          "cmd": "python3 \"$SELF/bin/wiki-fetch.py\" --retry-missing",
+          "interactive": true
+        }
+      ]
+    },
+    {
       "title": "Playlists & play-stats (Apple Music)",
       "items": [
         {
