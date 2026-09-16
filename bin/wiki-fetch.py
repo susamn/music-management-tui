@@ -305,42 +305,100 @@ def wikipedia_summary(ctx, page_title):
         return None
     return {"body": extract,
             "url": (data.get("content_urls", {}).get("desktop", {}) or {}).get("page", ""),
-            "title": data.get("title", page_title)}
+            "title": data.get("title", page_title),
+            # Wikipedia's one-line "short description" -- "2007 single by Amy
+            # Winehouse", "2011 Indian film". The cheapest reliable signal for
+            # what kind of thing an article is about.
+            "description": (data.get("description") or "")}
+
+
+def _norm(s):
+    return re.sub(r"[^a-z0-9]+", "", (s or "").lower())
+
+
+# Titles that are indexes rather than subjects. A discography or a "list of
+# songs sung by X" names the artist in every other sentence, so an
+# artist-mentioned check waves them straight through -- which is exactly how a
+# track ends up with a bare list as its story.
+LIST_TITLE_RE = re.compile(r"(^list of |discography|filmography|^songs recorded by )", re.I)
+SONG_WORDS = ("song", "single", "track", "composed", "recorded", "released as")
+
+
+def _is_song_article(ctx, got):
+    """Is this article about *this track*, rather than merely mentioning it?
+
+    Three things have to line up: it must not be an index page, the article's
+    title must actually contain the track's name, and either its short
+    description or its opening must describe a song. Any one of these alone
+    lets something through -- the title check alone accepts the film an
+    Indian film song appears in, and the song-word check alone accepts an
+    artist biography that happens to discuss their singles.
+    """
+    title, desc, body = got["title"], got["description"], got["body"]
+    if LIST_TITLE_RE.search(title) or body.lower().startswith("the following is a list"):
+        return False
+
+    want = _norm(ctx.title)
+    if not want or want not in _norm(title):
+        return False
+
+    blurb = (desc + " " + body[:400]).lower()
+    if not any(w in blurb for w in SONG_WORDS):
+        return False
+
+    artist = _norm(ctx.artist.split(",")[0])
+    return bool(artist) and artist in _norm(blurb)
 
 
 def wikipedia_story(ctx):
-    """The song's own Wikipedia article, if it has one.
+    """The track's own Wikipedia article, if it has one.
 
     Searched rather than guessed at: "Smooth Operator" is a disambiguation
-    page, "Smooth Operator (song)" is not, and no title-munging rule gets that
-    right across a library. The artist-name check is what rejects the wrong
-    article when the search finds one -- a song article essentially always
-    names its artist in the first paragraph.
+    page and "Smooth Operator (song)" is not, and no title-munging rule gets
+    that right across a library. Most tracks have no article at all -- for
+    those, returning nothing is the correct answer, and considerably more
+    useful than the artist's biography wearing the track's name.
     """
     q = f'{ctx.title} {ctx.artist} song'
     url = (f'{wiki_api(ctx.conf)}/w/api.php?action=query&list=search&format=json'
-           f'&srlimit=3&srsearch={urllib.parse.quote(q)}')
+           f'&srlimit=5&srsearch={urllib.parse.quote(q)}')
     data = get_json(url, ctx.conf)
     for hit in (data or {}).get("query", {}).get("search", []):
         got = wikipedia_summary(ctx, hit["title"])
-        if got and ctx.artist.split(",")[0].lower() in got["body"].lower():
+        if got and _is_song_article(ctx, got):
             return got
     return None
 
 
 def wikipedia_artist(ctx):
-    """The artist's article -- background when the song has none of its own."""
+    """The artist's own article -- background, and labelled as such.
+
+    Never the track's story: it is returned separately so build() can put it
+    under its own heading. An artist biography presented as "the story behind
+    this track" is worse than an empty modal, because it looks like an answer.
+    """
     wd = mb_url_rel(ctx, "artist", ctx.mbid.get("artist"), "wikidata")
-    if wd:
-        qid = wd.rstrip("/").rsplit("/", 1)[-1]
-        url = (f'https://www.wikidata.org/w/api.php?action=wbgetentities&format=json'
-               f'&props=sitelinks&ids={qid}&sitefilter={cfg(ctx.conf, "WIKI_LANG")}wiki')
-        data = get_json(url, ctx.conf)
-        links = (((data or {}).get("entities", {}).get(qid, {})).get("sitelinks", {})
-                 .get(f'{cfg(ctx.conf, "WIKI_LANG")}wiki', {}))
-        if links.get("title"):
-            return wikipedia_summary(ctx, links["title"])
-    return None
+    if not wd:
+        return None
+    qid = wd.rstrip("/").rsplit("/", 1)[-1]
+    url = (f'https://www.wikidata.org/w/api.php?action=wbgetentities&format=json'
+           f'&props=sitelinks&ids={qid}&sitefilter={cfg(ctx.conf, "WIKI_LANG")}wiki')
+    data = get_json(url, ctx.conf)
+    links = (((data or {}).get("entities", {}).get(qid, {})).get("sitelinks", {})
+             .get(f'{cfg(ctx.conf, "WIKI_LANG")}wiki', {}))
+    if not links.get("title"):
+        return None
+    got = wikipedia_summary(ctx, links["title"])
+    if not got or LIST_TITLE_RE.search(got["title"]):
+        return None
+    # The artist MBID came out of a fuzzy recording search, so it can belong to
+    # somebody else entirely -- a track tagged Shreya Ghoshal resolved to
+    # Sukhwinder Singh here. A biography under the wrong name is the worst
+    # thing this script can produce, so the article has to name the artist we
+    # were actually asked about.
+    if _norm(ctx.artist.split(",")[0]) not in _norm(got["title"] + " " + got["body"][:300]):
+        return None
+    return got
 
 
 # --- Last.fm -----------------------------------------------------------------
@@ -560,8 +618,18 @@ def build(ctx, dest_dir, want_images=True):
         ("Last.fm", lambda: lastfm_story(ctx)),
         ("Genius", lambda: genius_story(ctx)),
         ("Discogs", lambda: discogs_notes(ctx)),
-        ("Wikipedia", lambda: wikipedia_artist(ctx)),
     ])
+
+    # Only worth the extra requests when nothing told us about the track
+    # itself. Kept out of the chain above on purpose: it is background about
+    # the artist, and passing it off as the story behind the track would be
+    # worse than an empty modal, because it looks like an answer.
+    artist_bio = None
+    if not story:
+        got = wikipedia_artist(ctx)
+        if got:
+            artist_bio = {"body": got["body"], "url": got.get("url", ""), "source": "Wikipedia"}
+
     behind = first_of([
         ("Genius", lambda: genius_credits(ctx)),
         ("Discogs", lambda: discogs_notes(ctx)),
@@ -574,7 +642,7 @@ def build(ctx, dest_dir, want_images=True):
     bootlegs = mb_bootlegs(ctx)
     images = fetch_images(ctx, dest_dir) if want_images else []
 
-    if not (story or behind or bootlegs or images):
+    if not (story or artist_bio or behind or bootlegs or images):
         return None
 
     doc = {
@@ -585,11 +653,19 @@ def build(ctx, dest_dir, want_images=True):
         }.items() if v},
         "fetched_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+
     if story:
-        # Just the summary: a "Source: from Wikipedia" section would only
-        # restate what sources[] and the modal footer already carry, and it
-        # would cost a heading's worth of a small modal to do it.
         doc["story"] = {"summary": story["body"]}
+    if artist_bio:
+        # Its own heading, under story.sections rather than as the summary, so
+        # the modal can never present it as being about the track.
+        doc.setdefault("story", {}).setdefault("sections", []).append(
+            {k: v for k, v in {
+                "heading": f"About {ctx.artist}",
+                "body": artist_bio["body"],
+                "source": "Wikipedia",
+                "url": artist_bio.get("url"),
+            }.items() if v})
     if behind:
         doc["behind_the_scenes"] = [{k: v for k, v in {
             "heading": "Credits" if behind["source"] == "Genius" else "Release notes",
@@ -602,6 +678,7 @@ def build(ctx, dest_dir, want_images=True):
 
     seen, sources = set(), []
     for name, url in [(story and story["source"], story and story.get("url")),
+                      (artist_bio and "Wikipedia", artist_bio and artist_bio.get("url")),
                       (behind and behind["source"], behind and behind.get("url")),
                       ("MusicBrainz" if bootlegs else None, None)] + \
                      [(i["source"], None) for i in images]:
