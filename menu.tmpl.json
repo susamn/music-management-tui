@@ -126,6 +126,23 @@
           "label": "Retry tracks previously found to have no data",
           "cmd": "python3 \"$SELF/bin/wiki-fetch.py\" --retry-missing",
           "interactive": true
+        },
+        {
+          "key": "5",
+          "label": "List wiki git hasn't committed yet",
+          "cmd": "python3 \"$SELF/bin/wiki-push.py\" list"
+        },
+        {
+          "key": "6",
+          "label": "Pick some → copy into the music dir (for mpdtui)",
+          "cmd": "sel=$(python3 \"$SELF/bin/wiki-push.py\" list | fzf -m --prompt='to music> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/wiki-push.py\" to-music",
+          "interactive": true
+        },
+        {
+          "key": "7",
+          "label": "Pick some → push to Google Drive (rclone)",
+          "cmd": "sel=$(python3 \"$SELF/bin/wiki-push.py\" list | fzf -m --prompt='to drive> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/wiki-push.py\" to-drive",
+          "interactive": true
         }
       ]
     },

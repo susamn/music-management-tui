@@ -38,6 +38,24 @@ wiki/<artist>/<album>/<track>/        ->   MUSIC_DIR/<artist>/<album>/wiki/<trac
 That is `dirname` + `wiki/` + `basename`, which is the only place the two trees
 differ. Unlike lyrics, this is not a straight relative-path copy.
 
+`bin/wiki-push.py` — menu **4·5–4·7**, the same shape as `lyrics-push.py`:
+
+```bash
+wiki-push.py list                      # track dirs git hasn't committed yet
+wiki-push.py list | fzf -m | wiki-push.py to-music
+wiki-push.py list | fzf -m | wiki-push.py to-drive
+```
+
+The unit is the **directory**, not the file: a track's `wiki.json` and its
+images are pushed together or not at all, and an existing destination is
+replaced rather than merged, so a stale image from an earlier fetch cannot
+outlive the manifest that named it. Overwriting asks once.
+
+A track whose audio is not actually at that path is skipped and reported — an
+orphaned or misfiled wiki directory is worth hearing about rather than
+silently copying to a place nothing will read it from. Nothing is moved,
+staged, committed or deleted; the music-metadata working tree is untouched.
+
 ## Fetching
 
 `bin/wiki-fetch.py` — menu **4·1–4·4**. Stdlib only; needs `ffprobe` on PATH.
