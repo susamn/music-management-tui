@@ -69,7 +69,7 @@ Reuses the matching engine from `bin/playlist-sync.py` (`normalize`,
 `clean_apple_name`, `clean_tree_name`, `build_lookups`, `find_match`,
 `apple_track_num`, `tree_track_num`) to pair each Apple Music track with its
 `$GDRIVE_MUSIC_DIR` counterpart, the same way `playlist-sync.py` matches
-Apple paths onto `files.tree`.
+Apple paths onto `files.csv`.
 
 ```bash
 bin/apple-music-tag-sync.py --dry-run   # report only, write nothing

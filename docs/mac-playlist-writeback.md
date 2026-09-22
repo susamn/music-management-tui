@@ -3,7 +3,7 @@
 ## The want
 
 Today playlists flow **one way**: Apple Music.app → `playlists/*.m3u`
-(`bin/fetch.js` dumps, `bin/playlist-sync.py` matches onto `files.tree` and
+(`bin/fetch.js` dumps, `bin/playlist-sync.py` matches onto `files.csv` and
 writes the `.m3u`s).
 
 The missing direction: edit a `.m3u` in `music-metadata/playlists/` on the
@@ -16,7 +16,7 @@ curated somewhere other than Music.app.
 `playlist-sync.py` goes `Apple path → slug`. The reverse, `slug → Apple track`,
 is lossy:
 
-- The `.m3u` lines are `files.tree` slugs (`a-r-rahman/dil-se/06-satrangi-re-[mid-1000038].mp3`).
+- The `.m3u` lines are `files.csv` slugs (`a-r-rahman/dil-se/06-satrangi-re-[mid-1000038].mp3`).
   Music.app identifies tracks by **persistent ID**, and its file paths are
   NFD-normalised absolute paths under `~/Music/Music/Media.localized/…`.
 - `bin/extract.js` already emits `persistent_id`, `path_slug` and `join_key`

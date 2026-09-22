@@ -178,6 +178,17 @@
           "label": "Play-stats sync — dry run",
           "cmd": "python3 \"$SELF/bin/play-stats-sync.py\" --dry-run",
           "interactive": true
+        },
+        {
+          "key": "6",
+          "label": "Regenerate files.csv from $GDRIVE_MUSIC_DIR",
+          "cmd": "python3 \"$SELF/bin/generate-files-csv.py\"",
+          "interactive": true
+        },
+        {
+          "key": "7",
+          "label": "Regenerate files.csv — dry run",
+          "cmd": "python3 \"$SELF/bin/generate-files-csv.py\" --dry-run"
         }
       ]
     },

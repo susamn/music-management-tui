@@ -4,7 +4,7 @@
 
 | repo | is | holds |
 |---|---|---|
-| **`music-metadata`** | data, GitHub-backed, travels with the music collection | `lyrics/`, `playlists/`, `lyrics-reports/` (reports + `meta_genre.json`), `play-stats/play_stats.csv`, `files.tree` |
+| **`music-metadata`** | data, GitHub-backed, travels with the music collection | `lyrics/`, `playlists/`, `lyrics-reports/` (reports + `meta_genre.json`), `play-stats/play_stats.csv`, `files.csv` |
 | **`music-tui`** (this one) | tooling, local git | every script, all docs, the menu |
 
 They were one repo. The tooling was a grab-bag of folders each run by hand
@@ -32,7 +32,9 @@ is substituted; the `$VARS` in each `cmd` are expanded by the engine's
 | `MUSIC_DIR` | mpdtui's `music_dir`, else `~/Music/susamn-music-collection` | `fetch-lyrics`, `lyrics-push to-music`, `mpdtui.py` diff/orphans/prune |
 | `MPDTUI_DB` | `~/.config/mpdtui/mpdtui.db` | `mpdtui.py`, `mpdtui-db-backup.sh` |
 | `PLAY_STATS_CSV` | `$MUSIC_METADATA_DIR/play-stats/play_stats.csv` | `play-stats-sync`, `mpdtui.py diff-stats` / `import-ratings` |
-| `FILES_TREE` | `$MUSIC_METADATA_DIR/files.tree` | `playlist-sync` |
+| `FILES_CSV` | `$MUSIC_METADATA_DIR/files.csv` | `playlist-sync`, `generate-files-csv` |
+| `GDRIVE_MUSIC_DIR` | none - required | `generate-files-csv`, `playlist-sync` (existence check), `mcatalogid-backfill`, `apple-music-tag-sync` |
+| `APPLE_MUSIC_DIR` | `~/Music/Music/Media.localized/Music` | `apple-music-tag-sync` |
 | `RCLONE_MUSIC_REMOTE_PATH` | `gdrive:Media/Music` | `lyrics-push to-drive` |
 | `THEME` | `obsidian` | the menu |
 
@@ -68,7 +70,8 @@ is substituted; the `$VARS` in each `cmd` are expanded by the engine's
 | `lrc-sync.py` | `lrc-sync/lrc-sync.py` | MPD playback + a `.txt` | a synced `.lrc` | `--lyrics` / `$MUSIC_METADATA_DIR` |
 | `fetch-lyrics.py` | dotfiles `fetch_{lyrics,lrc,elrc}.py` | a music tree + LRCLIB | `.txt`/`.lrc`/`.elrc` at mirrored path | `--music`/`--out`, `$MUSIC_DIR`/`$MUSIC_METADATA_DIR` |
 | `refresh-reports.py` | `lyrics-reports/refresh.py` | `meta_genre.json` + lyrics on disk | `still_missing_*` + `README.md` in the reports dir | `$MUSIC_METADATA_DIR` |
-| `playlist-sync.py` + `fetch.js` | `playlist-sync/` | Music.app (or a dump) + `files.tree` | `playlists/*.m3u` | `$MUSIC_METADATA_DIR` / `$FILES_TREE` |
+| `generate-files-csv.py` | new | a music dir (default `$GDRIVE_MUSIC_DIR`) | `files.csv` | `--root`/`--out`, `$GDRIVE_MUSIC_DIR`/`$FILES_CSV` |
+| `playlist-sync.py` + `fetch.js` | `playlist-sync/` | Music.app (or a dump) + `files.csv` | `playlists/*.m3u` | `$MUSIC_METADATA_DIR` / `$FILES_CSV` / `$GDRIVE_MUSIC_DIR` |
 | `play-stats-sync.py` + `extract.js` | `play-stats/` | Music.app | merged `play_stats.csv` | `$PLAY_STATS_CSV` |
 | `mpdtui.py` | new | `mpdtui.db` (+ library, + `play_stats.csv`) | reports / diffs / DB edits | `$MPDTUI_DB` / `$MUSIC_DIR` / `$PLAY_STATS_CSV` |
 | `mpdtui-db-backup.sh` | dotfiles, verbatim | `mpdtui.db` | rclone remote snapshot | `$MPDTUI_DB` |
