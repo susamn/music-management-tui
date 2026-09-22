@@ -26,19 +26,21 @@ First run writes `~/.config/music-tui/config` from `config.example` (seeding
 `MUSIC_DIR` from `~/.config/mpdtui/config` if present). Edit that file, or use
 the **Settings** section in the menu, to point at your paths.
 
-The menu clamps to its 8 sections; type e.g. `1` then `12` for an item, `d` to
-dry-run (shows the resolved command), `t` for the theme, `0` to quit.
+Type e.g. `1` then `12` for an item, `d` to dry-run (shows the resolved
+command), `t` for the theme, `0` to quit.
 
 | # | section | what |
 |---|---|---|
 | 1 | Lyrics — sync & report | `lrc-sync` hand-timing, refresh the still-missing lists, browse them |
 | 2 | Lyrics — fetch from LRCLIB | plain `.txt` / synced `.lrc` / word-synced `.elrc`, whole tree or one sub-path |
 | 3 | Lyrics — push | uncommitted lyrics → next to the mp3 or to Google Drive; or push a past commit's lyrics to Drive (with a pushed-commit ledger) |
-| 4 | Playlists & play-stats | regenerate `playlists/*.m3u` and `play_stats.csv` from Apple Music.app |
-| 5 | mpdtui DB — read | summary, browse by rating / mark / tag, orphan rows |
-| 6 | mpdtui DB — diff | vs the music library, vs `play_stats.csv` |
-| 7 | mpdtui DB — write | backup/restore, marks, tags, import ratings, prune — dry-run + backup first |
-| 8 | Settings | show / edit the config |
+| 4 | Wiki — track stories | fetch per-track background from online sources, push into the music collection |
+| 5 | Playlists & play-stats | regenerate `playlists/*.m3u` and `play_stats.csv` from Apple Music.app |
+| 6 | mpdtui DB — read | summary, browse by rating / mark / tag, orphan rows |
+| 7 | mpdtui DB — diff | vs the music library, vs `play_stats.csv` |
+| 8 | mpdtui DB — write | backup/restore, marks, tags, import ratings, prune — dry-run + backup first |
+| 9 | MCATALOGID tagging | backfill missing `MCATALOGID` tags from filenames, assign new ids for tracks with none |
+| 10 | Settings | show / edit the config |
 
 ## Docs
 
@@ -47,6 +49,7 @@ dry-run (shows the resolved command), `t` for the theme, `0` to quit.
 - [`docs/mpdtui-db.md`](docs/mpdtui-db.md) — read / diff / write the mpdtui database
 - [`docs/push-to-drive.md`](docs/push-to-drive.md) — where pushed lyrics land
 - [`docs/mac-playlist-writeback.md`](docs/mac-playlist-writeback.md) — future: `.m3u` edits → Apple Music.app
+- [`docs/mcatalogid.md`](docs/mcatalogid.md) — the `MCATALOGID` tag: backfill, new-id assignment, one-time Apple Music sync
 
 ## Layout
 
@@ -61,7 +64,12 @@ See [`docs/architecture.md`](docs/architecture.md).
 
 ## Requirements
 
-Python 3 stdlib only. `fzf`, `sqlite3`, `rclone`, `ffprobe` for some items
-(the menu checks and tells you). The Apple Music items (`playlist-sync`,
-`play-stats` live fetch) need macOS + Music.app; their `--from` / merge modes
-work anywhere.
+Python 3 stdlib only, except `bin/mcatalogid-backfill.py` and
+`bin/apple-music-tag-sync.py`, which need `mutagen` (`pip install --user
+mutagen`) to edit ID3/MP4 tags in place without touching audio data —
+`ffmpeg -c copy -metadata ...` was tested and found to silently truncate a
+real file on an unusual mp3 stream, so it's never used for tag writes.
+`fzf`, `sqlite3`, `rclone`, `ffprobe` for some items (the menu checks and
+tells you). The Apple Music items (`playlist-sync`, `play-stats` live fetch,
+`apple-music-tag-sync`) need macOS + Music.app; `playlist-sync`'s `--from` /
+merge modes work anywhere.

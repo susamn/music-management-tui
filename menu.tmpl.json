@@ -265,6 +265,22 @@
       ]
     },
     {
+      "title": "MCATALOGID tagging",
+      "items": [
+        {
+          "key": "1",
+          "label": "Dry-run: backfill from filename + assign new ids",
+          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --dry-run --root \"$GDRIVE_MUSIC_DIR\""
+        },
+        {
+          "key": "2",
+          "label": "Run for real (writes tags, never renames files)",
+          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --root \"$GDRIVE_MUSIC_DIR\"",
+          "interactive": true
+        }
+      ]
+    },
+    {
       "title": "Settings",
       "items": [
         {
