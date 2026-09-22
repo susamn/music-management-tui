@@ -149,6 +149,32 @@ byte-for-byte identically.
 Run `--misses` to see the full unmatched list (~5k lines, mostly the first
 category).
 
+## Syncing across machines without conflicts
+
+`playlists/*.m3u` is fully rewritten on every run, on whichever machine runs
+it. Run it on two machines without pulling in between - a common case, since
+Apple Music.app's library isn't perfectly instant across devices - and a
+normal 3-way git merge conflicts on nearly every line, since almost nothing
+in two independent full rewrites lines up.
+
+`music-metadata/.gitattributes` routes `playlists/*.m3u` through a custom
+**union merge driver** (`bin/merge-m3u.py`) instead: it keeps every track
+from your side in its existing order, then appends whatever the other side
+has that yours doesn't - deduplicated, no conflict markers, ever. `git pull`
+just works; both machines' additions survive.
+
+The tradeoff, by design: union-by-addition can't tell "never added" apart
+from "removed on the other machine" - only *additions* are guaranteed-safe.
+A track deleted on only one side can resurface from a stale copy elsewhere.
+In practice these playlists are overwhelmingly append-heavy, so this rarely
+bites; if it ever does, fix that one playlist by hand and re-run
+`playlist-sync.py` to regenerate it cleanly.
+
+The driver *command* is per-machine git config, never synced by git itself
+(only the `.gitattributes` mapping is) - `music-tui.sh` re-registers it on
+every launch, so a new machine gets it for free on its first run instead of
+a separate setup step to remember.
+
 ## Relation to the old app and to play-stats/
 
 - `tools/playlist-sync-manager/` (the Swift app + `library.map`) is superseded

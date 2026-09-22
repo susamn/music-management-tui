@@ -96,6 +96,20 @@ export GDRIVE_MUSIC_DIR APPLE_MUSIC_DIR
 export MUSICBRAINZ_API COVERART_API WIKIPEDIA_API LASTFM_API GENIUS_API DISCOGS_API
 export LASTFM_API_KEY GENIUS_TOKEN DISCOGS_TOKEN
 
+# --- m3u union merge driver ---------------------------------------------------
+# playlists/*.m3u is fully rewritten by playlist-sync.py on every run, on
+# whichever machine runs it - two machines regenerating independently diverge
+# and conflict on nearly every line under a normal 3-way merge. .gitattributes
+# in music-metadata names the driver (playlists/*.m3u merge=m3u-union); the
+# driver ITSELF is per-machine git config, never synced by git, so it has to
+# be (re)registered here on every launch rather than once - cheap, idempotent,
+# and means a new machine gets it for free on its first run instead of a
+# separate setup step to remember. See bin/merge-m3u.py and docs/playlist-sync.md.
+if [[ -d "$MUSIC_METADATA_DIR/.git" ]]; then
+  git -C "$MUSIC_METADATA_DIR" config merge.m3u-union.driver \
+    "python3 \"$SELF/bin/merge-m3u.py\" %O %A %B"
+fi
+
 # --- generate the menu (only @THEME@ needs substituting; $VARS expand at run
 #     time via the engine's shell=True) ---------------------------------------
 sed "s/@THEME@/${THEME//\//\\/}/" "$SELF/menu.tmpl.json" > "$GEN_MENU"
