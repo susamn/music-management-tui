@@ -21,7 +21,9 @@ check MUSIC_METADATA_DIR      "${MUSIC_METADATA_DIR:-}"      dir
 check MUSIC_DIR               "${MUSIC_DIR:-}"               dir
 check MPDTUI_DB               "${MPDTUI_DB:-}"               file
 check PLAY_STATS_CSV          "${PLAY_STATS_CSV:-}"          file
-check FILES_TREE              "${FILES_TREE:-}"              file
+check FILES_CSV               "${FILES_CSV:-}"               file
+check GDRIVE_MUSIC_DIR         "${GDRIVE_MUSIC_DIR:-}"        dir
+check APPLE_MUSIC_DIR          "${APPLE_MUSIC_DIR:-}"         dir
 check RCLONE_MUSIC_REMOTE_PATH "${RCLONE_MUSIC_REMOTE_PATH:-}" remote
 printf '  %s %-26s %s\n' "     " THEME "${THEME:-obsidian}"
 

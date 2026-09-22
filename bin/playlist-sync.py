@@ -3,7 +3,7 @@
 
 Replaces the old PlaylistSyncManager.app. Pulls every user playlist live from
 Music.app (via fetch.js / JXA), fuzzy-matches each track's file path onto this
-repo's slugified namespace (files.tree), and writes one clean
+repo's slugified namespace (files.csv), and writes one clean
 
     playlists/<playlist name>.m3u
 
@@ -31,14 +31,19 @@ Matching (ported from the Swift tool, + an NFC fold):
   apple track name   drop extension, strip leading "D-NN " or "NN "
   tree filename      drop extension, strip "-[mid-...]" suffix and "D-NN-"/"NN-"
   lookups            artist|album|track  then  artist|track   (album dropped)
-  tie-break          keep the copy already in that .m3u, else files.tree order
+  tie-break          keep the copy already in that .m3u, else files.csv order
+  existence check    a match not actually present under $GDRIVE_MUSIC_DIR is a
+                      "phantom" (files.csv is a snapshot and can go stale), not
+                      a silent match
 
-macOS + Music.app required (unless --from). Stdlib only.
+macOS + Music.app required (unless --from). Requires mutagen only indirectly
+(files.csv is produced by bin/generate-files-csv.py, not by this script).
 
-Paths come from $MUSIC_METADATA_DIR / $FILES_TREE (override: --repo / --tree).
-Was music-metadata/playlist-sync/sync.py.
+Paths come from $MUSIC_METADATA_DIR / $FILES_CSV / $GDRIVE_MUSIC_DIR
+(override: --repo / --csv / --music-root). Was music-metadata/playlist-sync/sync.py.
 """
 import argparse
+import csv
 import json
 import os
 import re
@@ -50,20 +55,23 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 FETCH = HERE / "fetch.js"
 _REPO_DEFAULT = os.environ.get("MUSIC_METADATA_DIR") or str(HERE.parent)
-_TREE_DEFAULT = os.environ.get("FILES_TREE") or f"{_REPO_DEFAULT}/files.tree"
+_CSV_DEFAULT = os.environ.get("FILES_CSV") or f"{_REPO_DEFAULT}/files.csv"
+_MUSIC_ROOT_DEFAULT = os.environ.get("GDRIVE_MUSIC_DIR") or ""
 AUDIO_EXT = {"mp3", "m4a", "flac", "wav", "ogg", "opus", "m4p", "aac"}
 
 _non_slug = re.compile(r"[^a-z0-9@]")
 _multi_dash = re.compile(r"-+")
 _apple_num = re.compile(r"^\d+-\d+\s+|^\d+\s+")
+_apple_num_cap = re.compile(r"^(?:\d+-)?(\d+)\s")
 _tree_mid = re.compile(r"-\[mid-.*\]$")
 _tree_num = re.compile(r"^\d+-\d+-|^\d+-")
+_tree_num_cap = re.compile(r"^(?:\d+-)?(\d+)-")
 
 
 def normalize(s):
     if not s:
         return ""
-    # macOS hands back NFD paths; files.tree is NFC - fold to NFC first so
+    # macOS hands back NFD paths; files.csv is NFC - fold to NFC first so
     # "Fuzön" (o + combining diaeresis) and "fuzön" (ö) normalise the same.
     s = unicodedata.normalize("NFC", s).lower()
     s = _multi_dash.sub("-", _non_slug.sub("-", s))
@@ -81,26 +89,45 @@ def clean_tree_name(filename):
     return normalize(_tree_num.sub("", name))
 
 
-def parse_tree(path):
-    """Yield every audio-file path from a `tree`-format dump."""
+def apple_track_num(filename):
+    """The track number an Apple filename starts with ('1-02 Foo.mp3' -> 2), or None."""
+    name = filename.rsplit(".", 1)[0] if "." in filename else filename
+    m = _apple_num_cap.match(name)
+    return int(m.group(1)) if m else None
+
+
+def tree_track_num(filename):
+    """The track number a tree filename starts with ('4-foo-[mid-1].mp3' -> 4), or None."""
+    name = filename.rsplit(".", 1)[0] if "." in filename else filename
+    name = _tree_mid.sub("", name)
+    m = _tree_num_cap.match(name)
+    return int(m.group(1)) if m else None
+
+
+def parse_csv(path):
+    """Yield every audio-file path from files.csv (see bin/generate-files-csv.py)."""
     if not path.exists():
-        sys.exit(f"missing {path} - the slug namespace to match into")
-    stack = []
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        m = re.search(r"[├└]── ", raw)
-        if not m:
-            continue
-        depth = m.start() // 4
-        name = raw[m.end():].strip()
-        del stack[depth:]
-        stack.append(name)
-        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
-        if ext in AUDIO_EXT:
-            yield "/".join(stack)
+        sys.exit(f"missing {path} - the slug namespace to match into "
+                  "(bin/generate-files-csv.py writes this)")
+    with path.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            if row.get("path"):
+                yield row["path"]
+
+
+def disk_paths(root):
+    """Set of every audio-file path actually present under root, for the
+    existence check - one files.csv row can go stale between generation and
+    use, in either direction."""
+    paths = set()
+    for p in root.rglob("*"):
+        if p.is_file() and p.suffix.lower().lstrip(".") in AUDIO_EXT:
+            paths.add(str(p.relative_to(root)))
+    return paths
 
 
 def build_lookups(tree_paths):
-    """Each key -> list of matching tree paths, in files.tree order."""
+    """Each key -> list of matching tree paths, in files.csv order."""
     art_alb_trk, art_trk = {}, {}
     for full in tree_paths:
         parts = full.split("/")
@@ -120,14 +147,24 @@ def find_match(apple_path, art_alb_trk, art_trk, prefer=frozenset()):
     artist = normalize(parts[-3])
     album = normalize(parts[-2])
     track = clean_apple_name(parts[-1])
+    apnum = apple_track_num(parts[-1])
     for cands in (art_alb_trk.get(f"{artist}|{album}|{track}"),
                   art_trk.get(f"{artist}|{track}")):
         if not cands:
             continue
-        for c in cands:                 # keep the copy already in the playlist
-            if c in prefer:
+        for c in cands:                 # keep the copy already in the playlist -
+            if c in prefer:             # never let a guess override an established pick
                 return c
-        return cands[0]                 # else first in files.tree order (stable)
+        if len(cands) > 1 and apnum is not None:
+            # same title appears more than once for this artist (reprise, two
+            # singers, the same song on two pressings) - the track number is
+            # usually the only thing that tells them apart, even across the
+            # album-dropped fallback (Apple's own album string often doesn't
+            # text-match the tree's for the same release)
+            numbered = [c for c in cands if tree_track_num(c.rsplit("/", 1)[-1]) == apnum]
+            if len(numbered) == 1:
+                return numbered[0]
+        return cands[0]                 # else first in files.csv order (stable)
     return None
 
 
@@ -183,16 +220,27 @@ def main():
                          "`fetch.js --ndjson | pv -l | sync.py --from -`")
     ap.add_argument("--repo", default=_REPO_DEFAULT,
                     help="music-metadata dir holding playlists/ (default: $MUSIC_METADATA_DIR)")
-    ap.add_argument("--tree", default=_TREE_DEFAULT,
-                    help="files.tree slug namespace (default: $FILES_TREE)")
+    ap.add_argument("--csv", default=_CSV_DEFAULT,
+                    help="files.csv slug namespace (default: $FILES_CSV)")
+    ap.add_argument("--music-root", default=_MUSIC_ROOT_DEFAULT,
+                    help="directory to verify a match still exists in (default: "
+                         "$GDRIVE_MUSIC_DIR); pass '' to skip the existence check")
     args = ap.parse_args()
 
-    TREE = Path(args.tree).expanduser()
+    CSV = Path(args.csv).expanduser()
     PLAYLIST_DIR = Path(args.repo).expanduser() / "playlists"
 
-    tree_paths = list(parse_tree(TREE))
+    tree_paths = list(parse_csv(CSV))
     art_alb_trk, art_trk = build_lookups(tree_paths)
-    print(f"namespace: {len(tree_paths)} files from {TREE.name}")
+    print(f"namespace: {len(tree_paths)} files from {CSV.name}")
+
+    on_disk = None
+    if args.music_root:
+        music_root = Path(args.music_root).expanduser()
+        if not music_root.is_dir():
+            sys.exit(f"--music-root is not a directory: {music_root}")
+        on_disk = disk_paths(music_root)
+        print(f"existence check: {len(on_disk)} files under {music_root}")
 
     playlists = fetch_playlists(args.from_file)
     print(f"playlists: {len(playlists)} from "
@@ -205,9 +253,11 @@ def main():
                 if l.strip() and not l.startswith("#")]
 
     PLAYLIST_DIR.mkdir(exist_ok=True)
-    written, skipped, total_matched, total_missed, total_dups = 0, 0, 0, 0, 0
+    written, skipped, total_matched, total_missed, total_dups, total_phantom = \
+        0, 0, 0, 0, 0, 0
     kept_files = set()
     all_misses = []
+    all_phantoms = []
     warnings = []
 
     # Music.app can hold several playlists with the same name; merge them into
@@ -239,12 +289,16 @@ def main():
                 ap_seen.add(p)
                 ap_paths.append(p)
 
-        seen, lines, missed = set(), ["#EXTM3U"], set()
+        seen, lines, missed, phantoms = set(), ["#EXTM3U"], set(), set()
         dups = 0
         for ap_path in ap_paths:
             hit = find_match(ap_path, art_alb_trk, art_trk, prefer)
             if hit is None:
                 missed.add(ap_path)
+            elif on_disk is not None and hit not in on_disk:
+                # in files.csv but not actually on disk under --music-root -
+                # the CSV went stale since it was generated, not a real match
+                phantoms.add((ap_path, hit))
             elif hit in seen:
                 dups += 1          # two different Music tracks -> same repo file
             else:
@@ -254,7 +308,9 @@ def main():
         total_matched += len(seen)
         total_missed += len(missed)
         total_dups += dups
+        total_phantom += len(phantoms)
         all_misses += [(name, m) for m in sorted(missed)]
+        all_phantoms += [(name, ap, hit) for ap, hit in sorted(phantoms)]
 
         delta = ""
         if was is not None and was != len(seen):
@@ -264,6 +320,8 @@ def main():
         tag = f"{len(seen):4d} matched"
         if missed:
             tag += f"  {len(missed)} missed"
+        if phantoms:
+            tag += f"  {len(phantoms)} phantom"
         if dups:
             tag += f"  {dups} dup{'s' if dups > 1 else ''} dropped"
         print(f"  {name[:44]:44s} {tag}{delta}")
@@ -283,7 +341,7 @@ def main():
     orphans = sorted(p.name for p in PLAYLIST_DIR.glob("*.m3u")
                      if p.name not in kept_files)
     print(f"\nmatched {total_matched} unique tracks, missed {total_missed}, "
-          f"dropped {total_dups} duplicate(s)")
+          f"{total_phantom} phantom, dropped {total_dups} duplicate(s)")
     if orphans:
         print(f"\n{len(orphans)} .m3u file(s) with no Music.app playlist:")
         for o in orphans:
@@ -304,6 +362,11 @@ def main():
         print(f"\n--- {len(all_misses)} unmatched tracks ---")
         for pname, m in all_misses:
             print(f"  [{pname}] {m}")
+
+    if args.misses and all_phantoms:
+        print(f"\n--- {len(all_phantoms)} phantom tracks (in files.csv, not on disk) ---")
+        for pname, ap, hit in all_phantoms:
+            print(f"  [{pname}] {ap} -> {hit}")
 
     if args.dry_run:
         print("\n--dry-run: nothing written")

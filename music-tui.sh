@@ -76,22 +76,39 @@ source "$CONF"
 : "${MUSIC_DIR:?set MUSIC_DIR in $CONF}"
 : "${MPDTUI_DB:=$HOME/.config/mpdtui/mpdtui.db}"
 : "${PLAY_STATS_CSV:=$MUSIC_METADATA_DIR/play-stats/play_stats.csv}"
-: "${FILES_TREE:=$MUSIC_METADATA_DIR/files.tree}"
+: "${FILES_CSV:=$MUSIC_METADATA_DIR/files.csv}"
 : "${RCLONE_MUSIC_REMOTE_PATH:=gdrive:Media/Music}"
 : "${THEME:=obsidian}"
 : "${WIKI_DIR:=$MUSIC_METADATA_DIR/wiki}"
 : "${WIKI_REPORTS_DIR:=$MUSIC_METADATA_DIR/wiki-reports}"
 : "${WIKI_BATCH:=100}"
+: "${GDRIVE_MUSIC_DIR:=}"
+: "${APPLE_MUSIC_DIR:=$HOME/Music/Music/Media.localized/Music}"
 
 # expand a leading ~ that survived (e.g. a hand-edited value in quotes)
-for v in MUSIC_METADATA_DIR MUSIC_DIR MPDTUI_DB PLAY_STATS_CSV FILES_TREE WIKI_DIR WIKI_REPORTS_DIR; do
+for v in MUSIC_METADATA_DIR MUSIC_DIR MPDTUI_DB PLAY_STATS_CSV FILES_CSV WIKI_DIR WIKI_REPORTS_DIR GDRIVE_MUSIC_DIR APPLE_MUSIC_DIR; do
   printf -v "$v" '%s' "${!v/#\~/$HOME}"
 done
 
-export SELF MUSIC_METADATA_DIR MUSIC_DIR MPDTUI_DB PLAY_STATS_CSV FILES_TREE RCLONE_MUSIC_REMOTE_PATH
+export SELF MUSIC_METADATA_DIR MUSIC_DIR MPDTUI_DB PLAY_STATS_CSV FILES_CSV RCLONE_MUSIC_REMOTE_PATH
 export WIKI_DIR WIKI_REPORTS_DIR WIKI_BATCH WIKI_LANG WIKI_USER_AGENT
+export GDRIVE_MUSIC_DIR APPLE_MUSIC_DIR
 export MUSICBRAINZ_API COVERART_API WIKIPEDIA_API LASTFM_API GENIUS_API DISCOGS_API
 export LASTFM_API_KEY GENIUS_TOKEN DISCOGS_TOKEN
+
+# --- m3u union merge driver ---------------------------------------------------
+# playlists/*.m3u is fully rewritten by playlist-sync.py on every run, on
+# whichever machine runs it - two machines regenerating independently diverge
+# and conflict on nearly every line under a normal 3-way merge. .gitattributes
+# in music-metadata names the driver (playlists/*.m3u merge=m3u-union); the
+# driver ITSELF is per-machine git config, never synced by git, so it has to
+# be (re)registered here on every launch rather than once - cheap, idempotent,
+# and means a new machine gets it for free on its first run instead of a
+# separate setup step to remember. See bin/merge-m3u.py and docs/playlist-sync.md.
+if [[ -d "$MUSIC_METADATA_DIR/.git" ]]; then
+  git -C "$MUSIC_METADATA_DIR" config merge.m3u-union.driver \
+    "python3 \"$SELF/bin/merge-m3u.py\" %O %A %B"
+fi
 
 # --- generate the menu (only @THEME@ needs substituting; $VARS expand at run
 #     time via the engine's shell=True) ---------------------------------------

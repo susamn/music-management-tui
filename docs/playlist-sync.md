@@ -1,14 +1,15 @@
 # playlist-sync
 
 Regenerate `$MUSIC_METADATA_DIR/playlists/*.m3u` from Apple Music.app.
-Menu **4·1 / 4·2 / 4·3**.
+Menu **3·1 / 3·2 / 3·3** (Apple Music Sync; files.csv generation: **3·6 / 3·7**).
 
 ```
-bin/fetch.js           JXA - dumps every Music.app user playlist (name + track paths) as JSON
-bin/playlist-sync.py   matches those onto $FILES_TREE and writes playlists/*.m3u
+bin/fetch.js              JXA - dumps every Music.app user playlist (name + track paths) as JSON
+bin/generate-files-csv.py scans a music dir into files.csv - the match namespace
+bin/playlist-sync.py      matches Apple paths onto $FILES_CSV and writes playlists/*.m3u
 ```
 
-Writes into `music-metadata/playlists/`; reads `music-metadata/files.tree`.
+Writes into `music-metadata/playlists/`; reads `music-metadata/files.csv`.
 Live fetch needs macOS + Music.app; `--from <dump>` works anywhere.
 
 ## What it does
@@ -17,7 +18,8 @@ Live fetch needs macOS + Music.app; `--from <dump>` works anywhere.
 Music.app ──fetch.js──► [{name, tracks:[/abs/path.mp3, …]}, …]
                                    │
                         sync.py: fuzzy-match each path
-                                   │  against files.tree (slug namespace)
+                                   │  against files.csv (slug namespace)
+                                   │  + verify the match still exists on disk
                                    ▼
                    ../playlists/<name>.m3u   (#EXTM3U + repo-relative slug paths)
 ```
@@ -26,7 +28,7 @@ Music.app ──fetch.js──► [{name, tracks:[/abs/path.mp3, …]}, …]
   included; folder playlists and cloud-only tracks skipped).
 - Writes one clean `.m3u` per playlist - single `#EXTM3U` header, tracks in
   Music.app's playlist order, each repo path once (deduped).
-- Overwrites `playlists/*.m3u` in place. `../files.tree` is the match target
+- Overwrites `playlists/*.m3u` in place. `../files.csv` is the match target
   and is **not** modified; `../lyrics/` is never touched.
 
 ## Run
@@ -39,7 +41,30 @@ bin/playlist-sync.py --prune    # delete playlists/*.m3u that have no
                                          # matching Music.app playlist
 bin/playlist-sync.py --from d.json   # use a saved fetch.js dump
 bin/playlist-sync.py --from -        # read a dump from stdin
+bin/playlist-sync.py --music-root DIR  # existence-check against DIR instead
+                                        # of $GDRIVE_MUSIC_DIR; '' to skip it
 ```
+
+### Generating files.csv
+
+`files.csv` used to be `files.tree`, a text snapshot regenerated only on a
+separate machine (this repo had no script that produced it) - which is
+exactly why it went stale: 224 real Drive tracks weren't in it at all, and 98
+of its entries no longer existed. `bin/generate-files-csv.py` replaces that:
+any machine can produce it from whatever local music directory it has.
+
+```bash
+bin/generate-files-csv.py            # regenerate $FILES_CSV from $GDRIVE_MUSIC_DIR
+bin/generate-files-csv.py --dry-run  # report the count only, write nothing
+bin/generate-files-csv.py --root DIR # scan a different directory
+```
+
+Columns: `path,artist,album,filename,ext,mcatalogid` - `path` is the same
+slug format the matching engine has always used; `mcatalogid` is read via
+`mutagen` during the same scan (blank if missing or still the `"catalog"`
+placeholder - see `docs/mcatalogid.md`), so ID-based matching is possible
+later without a second pass over the library. Full regeneration every run,
+not a merge - this is a snapshot, not history like `play_stats.csv`.
 
 Fetching from Music.app takes ~2-3 min (~215 playlists, ~23k track lookups over
 Apple Events). macOS + Music.app required unless `--from` is given. First run
@@ -92,7 +117,10 @@ Ported from the Swift tool, plus an NFC fix. For each Apple path
 | tree filename | drop extension, strip `-[mid-…]` suffix and leading `D-NN-` / `NN-` |
 | lookup 1 | `artist \| album \| track` |
 | lookup 2 | `artist \| track` (album dropped - handles truncated album dirs) |
-| tie-break | if several tree files match, keep the one already in that `.m3u` (stable diffs), else first in `files.tree` order |
+| tie-break 1 | if several tree files match, keep the one already in that `.m3u` (stable diffs) - an established pick always wins, even over a plausible-looking track number |
+| tie-break 2 | otherwise, if exactly one of them has the same track number as the Apple file (compared as integers, ignoring zero-padding), use that - same title appears more than once for this artist (a reprise, two singers, the same song on two pressings), and the number is usually the only thing that tells them apart, even across lookup 2 where the album string itself doesn't text-match |
+| tie-break 3 | otherwise, first in `files.csv` order |
+| existence check | a match not actually present under `$GDRIVE_MUSIC_DIR` (or `--music-root`) is a `phantom`, not a silent match - `files.csv` is a snapshot and can go stale between generation and use |
 | dedupe | each resolved repo path written once per playlist (see "No duplicate tracks" above) |
 
 Idempotent: a second run with an unchanged library rewrites the files
@@ -110,15 +138,42 @@ byte-for-byte identically.
 
 ### Known misses (won't match, by design)
 
-- Tracks absent from `files.tree` - spa/meditation music, spoken word,
-  newer soundtracks not yet in the MPD library. `files.tree` is a frozen
-  snapshot; regenerate it on the Linux box to pick these up.
+- Tracks absent from `files.csv` - spa/meditation music, spoken word, or
+  anything added to the library since the last regenerate. Run
+  **3·6/3·7** (`bin/generate-files-csv.py`) to pick these up; unlike the old
+  `files.tree`, this doesn't require a different machine.
 - Apple's `_` stand-in for `:` `/` `'` in a few names (`A Hard Day_s Night`).
 - Heavy classical/raga naming (`Indian Classical`, `Thumri`) - check these by
   hand; they're flagged as warnings.
 
 Run `--misses` to see the full unmatched list (~5k lines, mostly the first
 category).
+
+## Syncing across machines without conflicts
+
+`playlists/*.m3u` is fully rewritten on every run, on whichever machine runs
+it. Run it on two machines without pulling in between - a common case, since
+Apple Music.app's library isn't perfectly instant across devices - and a
+normal 3-way git merge conflicts on nearly every line, since almost nothing
+in two independent full rewrites lines up.
+
+`music-metadata/.gitattributes` routes `playlists/*.m3u` through a custom
+**union merge driver** (`bin/merge-m3u.py`) instead: it keeps every track
+from your side in its existing order, then appends whatever the other side
+has that yours doesn't - deduplicated, no conflict markers, ever. `git pull`
+just works; both machines' additions survive.
+
+The tradeoff, by design: union-by-addition can't tell "never added" apart
+from "removed on the other machine" - only *additions* are guaranteed-safe.
+A track deleted on only one side can resurface from a stale copy elsewhere.
+In practice these playlists are overwhelmingly append-heavy, so this rarely
+bites; if it ever does, fix that one playlist by hand and re-run
+`playlist-sync.py` to regenerate it cleanly.
+
+The driver *command* is per-machine git config, never synced by git itself
+(only the `.gitattributes` mapping is) - `music-tui.sh` re-registers it on
+every launch, so a new machine gets it for free on its first run instead of
+a separate setup step to remember.
 
 ## Relation to the old app and to play-stats/
 

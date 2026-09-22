@@ -1,7 +1,7 @@
 # mpdtui DB — read / diff / write
 
-`bin/mpdtui.py` (menu sections **5 · 6 · 7**) plus `bin/mpdtui-db-backup.sh`
-(**7·1 / 7·2**).
+`bin/mpdtui.py` (menu section **5** — mpdtui) plus `bin/mpdtui-db-backup.sh`
+(**5·7 / 5·8**).
 
 `mpdtui` (the terminal player, `~/workspace/projects/mpdtui`) keeps per-track
 play counts, ratings, marks and tags in `~/.config/mpdtui/mpdtui.db`. Nothing
@@ -28,7 +28,7 @@ letters/digits, lowercased — `mpdtui.py`'s `normalize()` mirrors mpdtui's
 > `mpdtui.py` prints `no such column / table`, open mpdtui once (it migrates on
 > open) or update the script. The `connect()` guard names the missing table.
 
-## Read (section 5)
+## Read (section 5 — mpdtui, items 5·1–5·4)
 
 ```
 mpdtui.py summary                     counts: rated / played / marked, per-mark, per-tag
@@ -41,7 +41,7 @@ mpdtui.py orphans                     rows whose file is gone
 `list` prints `id ⇥ rating ⇥ play_count ⇥ marks ⇥ real_path` — pipe it through
 `fzf -m` into a write command.
 
-## Diff (section 6)
+## Diff (section 5 — mpdtui, items 5·5–5·6)
 
 ```
 mpdtui.py diff-library     orphan rows + path drift; "no DB row yet" as a count
@@ -50,7 +50,7 @@ mpdtui.py diff-stats       rating (mpdtui vs Apple user-rating /20) and play_cou
                            divergence, joined via play_stats.csv join_key
 ```
 
-## Write (section 7)
+## Write (section 5 — mpdtui, items 5·7–5·12)
 
 Every write is a **dry run** unless `--apply`, prompts unless `--yes`, and
 copies the DB to `<db>.bak-<timestamp>` before the first change.
