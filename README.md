@@ -74,3 +74,13 @@ real file on an unusual mp3 stream, so it's never used for tag writes.
 tells you). The Apple Music items (`playlist-sync`, `play-stats` live fetch,
 `apple-music-tag-sync`) need macOS + Music.app; `playlist-sync`'s `--from` /
 merge modes work anywhere.
+
+## Tests
+
+`pytest` (`pip install --user pytest`) - a dev-only dependency, not needed to
+run the tool itself. `tests/conftest.py` generates tiny real audio fixtures
+via `ffmpeg` once per run and caches them in `tests/_fixture_audio/`.
+
+```bash
+python3 -m pytest tests/ -v
+```
