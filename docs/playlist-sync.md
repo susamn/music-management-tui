@@ -92,7 +92,8 @@ Ported from the Swift tool, plus an NFC fix. For each Apple path
 | tree filename | drop extension, strip `-[mid-…]` suffix and leading `D-NN-` / `NN-` |
 | lookup 1 | `artist \| album \| track` |
 | lookup 2 | `artist \| track` (album dropped - handles truncated album dirs) |
-| tie-break | if several tree files match, keep the one already in that `.m3u` (stable diffs), else first in `files.tree` order |
+| tie-break 1 | if several tree files match and exactly one has the same track number as the Apple file, use that (same title appears twice on the album - a reprise, two singers) |
+| tie-break 2 | otherwise, keep the one already in that `.m3u` (stable diffs), else first in `files.tree` order |
 | dedupe | each resolved repo path written once per playlist (see "No duplicate tracks" above) |
 
 Idempotent: a second run with an unchanged library rewrites the files

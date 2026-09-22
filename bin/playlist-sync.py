@@ -56,8 +56,10 @@ AUDIO_EXT = {"mp3", "m4a", "flac", "wav", "ogg", "opus", "m4p", "aac"}
 _non_slug = re.compile(r"[^a-z0-9@]")
 _multi_dash = re.compile(r"-+")
 _apple_num = re.compile(r"^\d+-\d+\s+|^\d+\s+")
+_apple_num_cap = re.compile(r"^(?:\d+-)?(\d+)\s")
 _tree_mid = re.compile(r"-\[mid-.*\]$")
 _tree_num = re.compile(r"^\d+-\d+-|^\d+-")
+_tree_num_cap = re.compile(r"^(?:\d+-)?(\d+)-")
 
 
 def normalize(s):
@@ -79,6 +81,21 @@ def clean_tree_name(filename):
     name = filename.rsplit(".", 1)[0] if "." in filename else filename
     name = _tree_mid.sub("", name)
     return normalize(_tree_num.sub("", name))
+
+
+def apple_track_num(filename):
+    """The track number an Apple filename starts with ('1-02 Foo.mp3' -> '02'), or None."""
+    name = filename.rsplit(".", 1)[0] if "." in filename else filename
+    m = _apple_num_cap.match(name)
+    return m.group(1) if m else None
+
+
+def tree_track_num(filename):
+    """The track number a tree filename starts with ('02-foo-[mid-1].mp3' -> '02'), or None."""
+    name = filename.rsplit(".", 1)[0] if "." in filename else filename
+    name = _tree_mid.sub("", name)
+    m = _tree_num_cap.match(name)
+    return m.group(1) if m else None
 
 
 def parse_tree(path):
@@ -120,10 +137,17 @@ def find_match(apple_path, art_alb_trk, art_trk, prefer=frozenset()):
     artist = normalize(parts[-3])
     album = normalize(parts[-2])
     track = clean_apple_name(parts[-1])
+    apnum = apple_track_num(parts[-1])
     for cands in (art_alb_trk.get(f"{artist}|{album}|{track}"),
                   art_trk.get(f"{artist}|{track}")):
         if not cands:
             continue
+        if len(cands) > 1 and apnum is not None:
+            # same title appears twice on the album (e.g. reprise, two singers) -
+            # the track number is the only thing that tells them apart
+            numbered = [c for c in cands if tree_track_num(c.rsplit("/", 1)[-1]) == apnum]
+            if len(numbered) == 1:
+                return numbered[0]
         for c in cands:                 # keep the copy already in the playlist
             if c in prefer:
                 return c
