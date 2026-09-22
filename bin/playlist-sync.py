@@ -178,19 +178,26 @@ def _parse_dump(text):
     return [json.loads(l) for l in text.splitlines() if l.strip()]
 
 
-def fetch_playlists(from_file):
+def fetch_playlists(from_file, names_only=False, one=None):
     if from_file:
         text = sys.stdin.read() if from_file == "-" \
             else Path(from_file).read_text(encoding="utf-8")
         return _parse_dump(text)
     if not FETCH.exists():
         sys.exit(f"missing {FETCH}")
-    print("fetching playlists from Music.app (a few minutes; names stream below)...",
+    print("fetching playlist names..." if names_only else
+          f"fetching playlist {one}..." if one else
+          "fetching playlists from Music.app (a few minutes; names stream below)...",
           file=sys.stderr)
+    command = ["osascript", "-l", "JavaScript", str(FETCH)]
+    if names_only:
+        command.append("--names")
+    elif one is not None:
+        command.extend(["--one", one])
     try:
         # stderr is left attached to the terminal so fetch.js's per-playlist
         # progress line shows live.
-        p = subprocess.run(["osascript", "-l", "JavaScript", str(FETCH)],
+        p = subprocess.run(command,
                            stdout=subprocess.PIPE, text=True, check=True)
     except FileNotFoundError:
         sys.exit("osascript not found - this needs macOS (or use --from).")
@@ -207,6 +214,9 @@ def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry-run", action="store_true")
+    selection = ap.add_mutually_exclusive_group()
+    selection.add_argument("--one", metavar="NAME", help="export one Apple Music playlist")
+    selection.add_argument("--pick", action="store_true", help="choose an Apple Music playlist using fzf")
     ap.add_argument("--prune", action="store_true",
                     help="delete playlists/*.m3u with no matching Music playlist")
     ap.add_argument("--misses", action="store_true",
@@ -226,9 +236,40 @@ def main():
                     help="directory to verify a match still exists in (default: "
                          "$GDRIVE_MUSIC_DIR); pass '' to skip the existence check")
     args = ap.parse_args()
+    if args.prune and (args.one or args.pick):
+        ap.error("--prune cannot be combined with single-playlist export")
 
     CSV = Path(args.csv).expanduser()
     PLAYLIST_DIR = Path(args.repo).expanduser() / "playlists"
+
+    playlists = fetch_playlists(args.from_file, names_only=args.pick, one=args.one)
+    if args.pick:
+        names = sorted({p["name"] for p in playlists if p["name"].strip()})
+        if not names:
+            print("No Apple Music playlists available.")
+            return
+        try:
+            result = subprocess.run(
+                ["fzf", "--read0", "--print0", "--no-multi", "--prompt=Apple playlist > "],
+                input="\0".join(names) + "\0", stdout=subprocess.PIPE, text=True,
+            )
+        except FileNotFoundError:
+            sys.exit("Playlist selection requires fzf. Install it and try again.")
+        if result.returncode in (1, 130):
+            return
+        if result.returncode != 0:
+            sys.exit(f"fzf exited with code {result.returncode}")
+        args.one = result.stdout.removesuffix("\0")
+        if args.one not in names:
+            sys.exit("fzf returned an unknown playlist")
+        if not args.from_file:
+            playlists = fetch_playlists(None, one=args.one)
+    if args.one:
+        playlists = [p for p in playlists if p["name"] == args.one]
+        if not playlists:
+            sys.exit(f"No Apple Music playlist named {args.one!r}")
+    print(f"playlists: {len(playlists)} from "
+          f"{'Music.app' if not args.from_file else args.from_file}\n")
 
     tree_paths = list(parse_csv(CSV))
     art_alb_trk, art_trk = build_lookups(tree_paths)
@@ -242,9 +283,6 @@ def main():
         on_disk = disk_paths(music_root)
         print(f"existence check: {len(on_disk)} files under {music_root}")
 
-    playlists = fetch_playlists(args.from_file)
-    print(f"playlists: {len(playlists)} from "
-          f"{'Music.app' if not args.from_file else args.from_file}\n")
 
     def existing_lines(path):
         if not path.exists():
@@ -252,9 +290,12 @@ def main():
         return [l for l in path.read_text(encoding="utf-8").splitlines()
                 if l.strip() and not l.startswith("#")]
 
-    PLAYLIST_DIR.mkdir(exist_ok=True)
+    if not args.dry_run:
+        PLAYLIST_DIR.mkdir(exist_ok=True)
     written, skipped, total_matched, total_missed, total_dups, total_phantom = \
         0, 0, 0, 0, 0, 0
+    unchanged = 0
+    planned = []
     kept_files = set()
     all_misses = []
     all_phantoms = []
@@ -324,24 +365,48 @@ def main():
             tag += f"  {len(phantoms)} phantom"
         if dups:
             tag += f"  {dups} dup{'s' if dups > 1 else ''} dropped"
-        print(f"  {name[:44]:44s} {tag}{delta}")
-
-        # never silently blank a real playlist
-        if len(seen) == 0 and was:
-            if not args.allow_empty:
-                warnings.append(f"{name}: 0 matched, kept existing {was}-track file "
-                                "(--allow-empty to overwrite)")
-                skipped += 1
-                continue
-
         if not args.dry_run:
-            dest.write_text("\n".join(lines), encoding="utf-8")
+            print(f"  {name}  {tag}{delta}")
+
+        blocked = len(seen) == 0 and bool(was) and bool(raw_tracks) and not args.allow_empty
+        if args.dry_run:
+            old = set(prior or ())
+            additions = len(seen - old) if not blocked else 0
+            deletions = (len(prior or ()) - len(old & seen)) if not blocked else 0
+            kind = "New playlist" if prior is None else "Existing playlist"
+            print(f"\n{kind}: {name}")
+            print(f"  Apple Music: {len(raw_tracks)} tracks")
+            print(f"  Exported file: {len(prior or ())} tracks")
+            print(f"  Exported file changes: add {additions}, delete {deletions}")
+            if missed or phantoms:
+                print(f"  Warning: {len(missed)} unmatched tracks; {len(phantoms)} missing files")
+        if blocked:
+            warnings.append(f"{name}: no tracks matched; kept existing playlist (--allow-empty to overwrite)")
+            skipped += 1
+            continue
+
+        if prior is not None:
+            # Keep retained tracks in their existing order; append only additions.
+            retained = list(dict.fromkeys(p for p in prior if p in seen))
+            retained_set = set(retained)
+            lines = ["#EXTM3U", *retained,
+                     *(p for p in lines[1:] if p not in retained_set)]
+        content = ("\n".join(lines) + "\n").encode("utf-8")
+        if dest.exists() and dest.read_bytes() == content:
+            unchanged += 1
+            continue
+        planned.append(name)
+        if args.dry_run and prior is not None and set(prior) == seen and len(prior) == len(seen):
+            print("  Formatting: fix header or final newline")
+        if not args.dry_run:
+            dest.write_bytes(content)
             written += 1
 
-    orphans = sorted(p.name for p in PLAYLIST_DIR.glob("*.m3u")
-                     if p.name not in kept_files)
-    print(f"\nmatched {total_matched} unique tracks, missed {total_missed}, "
-          f"{total_phantom} phantom, dropped {total_dups} duplicate(s)")
+    orphans = [] if args.one else sorted(p.name for p in PLAYLIST_DIR.glob("*.m3u")
+                                        if p.name not in kept_files)
+    if not args.dry_run:
+        print(f"\nmatched {total_matched} unique tracks, missed {total_missed}, "
+              f"{total_phantom} phantom, dropped {total_dups} duplicate(s)")
     if orphans:
         print(f"\n{len(orphans)} .m3u file(s) with no Music.app playlist:")
         for o in orphans:
@@ -350,6 +415,9 @@ def main():
             for o in orphans:
                 (PLAYLIST_DIR / o).unlink()
             print(f"  pruned {len(orphans)}")
+        elif args.prune:
+            for o in orphans:
+                print(f"DELETE {o}")
         elif orphans:
             print("  (left in place; pass --prune to delete)")
 
@@ -368,10 +436,9 @@ def main():
         for pname, ap, hit in all_phantoms:
             print(f"  [{pname}] {ap} -> {hit}")
 
-    if args.dry_run:
-        print("\n--dry-run: nothing written")
-    else:
-        print(f"\nwrote {written} playlist file(s), skipped {skipped}, to {PLAYLIST_DIR}")
+    if not args.dry_run:
+        print(f"\nwrote {written} playlist file(s), unchanged {unchanged}, "
+              f"skipped {skipped}, to {PLAYLIST_DIR}")
 
 
 if __name__ == "__main__":

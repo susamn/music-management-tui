@@ -97,15 +97,25 @@ def load_csv_mcatalogids(csv_path):
     return out
 
 
-def scan_apple_by_mcatalogid(apple_root):
-    """mcatalogid -> absolute path, for every tagged file under apple_root."""
+def scan_apple_by_mcatalogid(apple_root, library_locations=None):
+    """Index paths by ID; retain duplicate candidates for playlist-level checks."""
     out = {}
     for path in apple_root.rglob("*"):
         if path.is_file() and path.suffix.lower() in (".mp3", ".m4a"):
+            if library_locations is not None and path.resolve() not in library_locations:
+                continue
             val = read_tag(path)
             if is_real(val):
-                out[val] = str(path)
+                out.setdefault(val, []).append(str(path))
     return out
+
+
+def read_library_locations():
+    result = subprocess.run(
+        ["osascript", "-l", "JavaScript", str(WRITEBACK_JS), "--library"],
+        capture_output=True, text=True, check=True,
+    )
+    return {Path(p).resolve() for p in json.loads(result.stdout)["locations"]}
 
 
 def read_playlist_locations(playlist_name):
@@ -147,11 +157,11 @@ def plan_for_playlist(m3u_path, csv_ids, apple_by_id):
     m3u_lines = [l.strip() for l in m3u_path.read_text(encoding="utf-8").splitlines()
                  if l.strip() and not l.startswith("#")]
 
-    wanted_ids, unresolved = set(), []
+    wanted_ids, unresolved = {}, []
     for line in m3u_lines:
         mid = csv_ids.get(unicodedata.normalize("NFC", line))
         if mid:
-            wanted_ids.add(mid)
+            wanted_ids[mid] = None
         else:
             unresolved.append(line)
 
@@ -163,16 +173,22 @@ def plan_for_playlist(m3u_path, csv_ids, apple_by_id):
         if is_real(mid):
             current_ids.add(mid)
 
-    missing_ids = sorted(wanted_ids - current_ids)
-    to_add_paths, not_in_library = [], []
+    missing_ids = [mid for mid in wanted_ids if mid not in current_ids]
+    to_add_paths, not_in_library, ambiguous = [], [], {}
     for mid in missing_ids:
-        p = apple_by_id.get(mid)
-        (to_add_paths if p else not_in_library).append(p or mid)
+        candidates = apple_by_id.get(mid, [])
+        if len(candidates) > 1:
+            ambiguous[mid] = sorted(candidates)
+        elif candidates:
+            to_add_paths.append(candidates[0])
+        else:
+            not_in_library.append(mid)
 
     return {
         "target_name": target_name, "current_found": current_found,
         "to_add_paths": to_add_paths, "not_in_library": not_in_library,
-        "unresolved": unresolved,
+        "unresolved": unresolved, "ambiguous": ambiguous,
+        "apple_count": len(locations or []), "exported_count": len(m3u_lines),
     }
 
 
@@ -183,6 +199,7 @@ def main():
     group.add_argument("--one", metavar="NAME",
                         help="one playlist - the .m3u filename, without extension")
     group.add_argument("--all", action="store_true", help="every playlists/*.m3u")
+    group.add_argument("--pick", action="store_true", help="choose a playlist using fzf")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--repo", default=_REPO_DEFAULT,
                      help="music-metadata dir holding playlists/ (default: $MUSIC_METADATA_DIR)")
@@ -195,6 +212,26 @@ def main():
     csv_path = Path(args.csv).expanduser()
     apple_root = Path(args.apple_root).expanduser()
     playlist_dir = Path(args.repo).expanduser() / "playlists"
+
+    if args.pick:
+        names = sorted(p.stem for p in playlist_dir.glob("*.m3u") if p.is_file())
+        if not names:
+            print(f"No playlists found in {playlist_dir}")
+            return 0
+        try:
+            selection = subprocess.run(
+                ["fzf", "--read0", "--print0", "--no-multi", "--prompt=Playlist > "],
+                input="\0".join(names) + "\0", stdout=subprocess.PIPE, text=True,
+            )
+        except FileNotFoundError:
+            sys.exit("Playlist selection requires fzf. Install it and try again.")
+        if selection.returncode in (1, 130):
+            return 0
+        if selection.returncode != 0:
+            sys.exit(f"fzf exited with code {selection.returncode}")
+        args.one = selection.stdout.removesuffix("\0")
+        if args.one not in names:
+            sys.exit("fzf returned an unknown playlist")
 
     if not csv_path.is_file():
         sys.exit(f"missing {csv_path}")
@@ -212,47 +249,64 @@ def main():
     print(f"reading {csv_path.name} ...", file=sys.stderr)
     csv_ids = load_csv_mcatalogids(csv_path)
     print(f"scanning {apple_root} for tagged files ...", file=sys.stderr)
-    apple_by_id = scan_apple_by_mcatalogid(apple_root)
+    apple_by_id = scan_apple_by_mcatalogid(apple_root, read_library_locations())
     print(f"{len(apple_by_id)} tagged files found under {apple_root.name}\n",
           file=sys.stderr)
 
     total_added, total_created = 0, 0
+    planned, unchanged, blocked = 0, 0, 0
     for m3u_path in targets:
         plan = plan_for_playlist(m3u_path, csv_ids, apple_by_id)
 
-        tag = f"{len(plan['to_add_paths']):4d} to add"
-        if plan["not_in_library"]:
-            tag += f"  {len(plan['not_in_library'])} not in library"
-        if plan["unresolved"]:
-            tag += f"  {len(plan['unresolved'])} unresolved"
-        if not plan["current_found"]:
-            tag += "  (new playlist)"
-        print(f"  {plan['target_name'][:44]:44s} {tag}")
+        has_errors = bool(plan["not_in_library"] or plan["unresolved"] or plan.get("ambiguous"))
+        changes = bool(plan["to_add_paths"]) or not plan["current_found"]
+        kind = "Existing playlist" if plan["current_found"] else "New playlist"
+        print(f"\n{kind}: {plan['target_name']}")
+        print(f"  Apple Music: {plan['apple_count']} local tracks")
+        print(f"  Exported file: {plan['exported_count']} tracks")
+        additions = 0 if has_errors else len(plan["to_add_paths"])
+        print(f"  Apple Music changes: add {additions}, delete 0 (additive writeback)")
+        if has_errors:
+            print("  Blocked: resolve the tracks listed below before applying.")
 
         for line in plan["unresolved"]:
             print(f"    ⚠ no mcatalogid in files.csv: {line}", file=sys.stderr)
         for mid in plan["not_in_library"]:
             print(f"    ⚠ not yet imported to Apple Music: mcatalogid {mid}",
                   file=sys.stderr)
+        for mid, paths in plan.get("ambiguous", {}).items():
+            print(f"    ⚠ multiple library files have MCATALOGID {mid}; "
+                  "no candidate selected:", file=sys.stderr)
+            for path in paths:
+                print(f"      {path}", file=sys.stderr)
 
-        if args.dry_run or not plan["to_add_paths"]:
+        if has_errors:
+            blocked += 1
+            continue
+        if not changes:
+            unchanged += 1
+            continue
+        planned += 1
+        if args.dry_run:
             continue
 
         result = apply_playlist(plan["target_name"], plan["to_add_paths"])
         total_added += len(result["added"])
         total_created += 1 if result["created"] else 0
+        if result["not_in_library"]:
+            blocked += 1
+            for path in result["not_in_library"]:
+                print(f"    ERROR no longer in Apple Music library: {path}", file=sys.stderr)
         if result["added"]:
             print(f"    wrote {len(result['added'])} track(s)"
                   f"{' (created playlist)' if result['created'] else ''}")
         if result["already_present"]:
             print(f"    ({len(result['already_present'])} already present, skipped)")
 
-    if args.dry_run:
-        print("\n--dry-run: nothing written")
-    else:
+    if not args.dry_run:
         print(f"\nwrote {total_added} track(s) across {len(targets)} playlist(s), "
               f"{total_created} playlist(s) created")
-    return 0
+    return 1 if blocked else 0
 
 
 if __name__ == "__main__":

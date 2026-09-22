@@ -141,14 +141,14 @@
       "items": [
         {
           "key": "1",
-          "label": "Sync playlists — live",
-          "cmd": "python3 \"$SELF/bin/playlist-sync.py\"",
+          "label": "Sync one playlist — dry run",
+          "cmd": "python3 \"$SELF/bin/playlist-sync.py\" --pick --dry-run",
           "interactive": true
         },
         {
           "key": "2",
-          "label": "Sync playlists — from a dump",
-          "cmd": "read -rp 'fetch.js dump path: ' f && python3 \"$SELF/bin/playlist-sync.py\" --from \"$f\"",
+          "label": "Sync one playlist — apply",
+          "cmd": "python3 \"$SELF/bin/playlist-sync.py\" --pick",
           "interactive": true
         },
         {
@@ -159,49 +159,61 @@
         },
         {
           "key": "4",
-          "label": "Sync play stats — live",
-          "cmd": "python3 \"$SELF/bin/play-stats-sync.py\"",
+          "label": "Sync playlists — live",
+          "cmd": "python3 \"$SELF/bin/playlist-sync.py\"",
           "interactive": true
         },
         {
           "key": "5",
-          "label": "Sync play stats — dry run",
-          "cmd": "python3 \"$SELF/bin/play-stats-sync.py\" --dry-run",
+          "label": "Sync playlists — from a dump",
+          "cmd": "read -rp 'fetch.js dump path: ' f && python3 \"$SELF/bin/playlist-sync.py\" --from \"$f\"",
           "interactive": true
         },
         {
           "key": "6",
-          "label": "Regenerate files.csv",
-          "cmd": "python3 \"$SELF/bin/generate-files-csv.py\"",
+          "label": "Writeback one playlist — dry run",
+          "cmd": "python3 \"$SELF/bin/playlist-writeback.py\" --pick --dry-run",
           "interactive": true
         },
         {
           "key": "7",
-          "label": "Regenerate files.csv — dry run",
-          "cmd": "python3 \"$SELF/bin/generate-files-csv.py\" --dry-run"
+          "label": "Writeback one playlist — apply",
+          "cmd": "python3 \"$SELF/bin/playlist-writeback.py\" --pick",
+          "interactive": true
         },
         {
           "key": "8",
-          "label": "Writeback one playlist — dry run",
-          "cmd": "read -rp 'playlist name (matches a playlists/<name>.m3u): ' p && python3 \"$SELF/bin/playlist-writeback.py\" --one \"$p\" --dry-run",
-          "interactive": true
-        },
-        {
-          "key": "9",
-          "label": "Writeback one playlist — apply",
-          "cmd": "read -rp 'playlist name (matches a playlists/<name>.m3u): ' p && python3 \"$SELF/bin/playlist-writeback.py\" --one \"$p\"",
-          "interactive": true
-        },
-        {
-          "key": "10",
           "label": "Writeback all playlists — dry run",
           "cmd": "python3 \"$SELF/bin/playlist-writeback.py\" --all --dry-run",
           "interactive": true
         },
         {
-          "key": "11",
+          "key": "9",
           "label": "Writeback all playlists — apply",
           "cmd": "python3 \"$SELF/bin/playlist-writeback.py\" --all",
+          "interactive": true
+        },
+        {
+          "key": "10",
+          "label": "Sync play stats — dry run",
+          "cmd": "python3 \"$SELF/bin/play-stats-sync.py\" --dry-run",
+          "interactive": true
+        },
+        {
+          "key": "11",
+          "label": "Sync play stats — live",
+          "cmd": "python3 \"$SELF/bin/play-stats-sync.py\"",
+          "interactive": true
+        },
+        {
+          "key": "12",
+          "label": "Regenerate files.csv — dry run",
+          "cmd": "python3 \"$SELF/bin/generate-files-csv.py\" --dry-run"
+        },
+        {
+          "key": "13",
+          "label": "Regenerate files.csv",
+          "cmd": "python3 \"$SELF/bin/generate-files-csv.py\"",
           "interactive": true
         }
       ]

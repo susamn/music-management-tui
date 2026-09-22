@@ -26,6 +26,10 @@ function progress(s) {
 function pad(n, w) { var s = String(n); while (s.length < w) s = " " + s; return s; }
 
 function run(argv) {
+  argv = argv || [];
+  var namesOnly = argv.indexOf("--names") !== -1;
+  var oneIndex = argv.indexOf("--one");
+  var selected = oneIndex === -1 ? null : argv[oneIndex + 1];
   var ndjson = (argv || []).indexOf("--ndjson") !== -1;
   var Music = Application("Music");
   var pls = Music.userPlaylists;
@@ -36,6 +40,7 @@ function run(argv) {
   for (var i = 0; i < total; i++) {
     var pl = pls[i];
     var name = names[i];
+    if (selected !== null && name !== selected) continue;
 
     var special;
     try { special = pl.specialKind(); } catch (e) { special = "none"; }
@@ -43,6 +48,10 @@ function run(argv) {
                (special && special !== "none" && special !== "Purchased Music");
 
     var smart = false;
+    if (namesOnly) {
+      if (!skip) out.push({name: name, tracks: []});
+      continue;
+    }
     try { smart = pl.smart(); } catch (e) {}
 
     var paths = [];

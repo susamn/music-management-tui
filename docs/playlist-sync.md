@@ -26,12 +26,24 @@ Music.app ──fetch.js──► [{name, tracks:[/abs/path.mp3, …]}, …]
 
 - Pulls **all** user playlists live from Music.app each run (smart playlists
   included; folder playlists and cloud-only tracks skipped).
-- Writes one clean `.m3u` per playlist - single `#EXTM3U` header, tracks in
-  Music.app's playlist order, each repo path once (deduped).
-- Overwrites `playlists/*.m3u` in place. `../files.csv` is the match target
+- Creates new `.m3u` files in Music.app order. For existing files, retains
+  surviving tracks in their current order, removes absent tracks and duplicates,
+  and appends new tracks in Music.app order. Each file has one `#EXTM3U` header
+  and a final newline.
+- Writes only files whose contents changed. `../files.csv` is the match target
   and is **not** modified; `../lyrics/` is never touched.
 
 ## Run
+
+Menu **3·1** previews one playlist and **3·2** applies its export. Both open
+an `fzf` picker populated from Apple Music, including new playlists and emoji
+names. Escape cancels. Other exported playlists are left untouched.
+Only playlist names are fetched before opening the picker. Tracks and the
+local catalog are read after selection, scoped to the selected Apple playlist.
+
+CLI equivalents: `bin/playlist-sync.py --pick --dry-run` and
+`bin/playlist-sync.py --pick`. Use `--one "Name"` for scripted selection.
+Single-playlist export cannot be combined with `--prune`.
 
 ```bash
 bin/playlist-sync.py            # regenerate playlists/ in place
@@ -123,14 +135,19 @@ Ported from the Swift tool, plus an NFC fix. For each Apple path
 | existence check | a match not actually present under `$GDRIVE_MUSIC_DIR` (or `--music-root`) is a `phantom`, not a silent match - `files.csv` is a snapshot and can go stale between generation and use |
 | dedupe | each resolved repo path written once per playlist (see "No duplicate tracks" above) |
 
-Idempotent: a second run with an unchanged library rewrites the files
-byte-for-byte identically.
+Idempotent: a second run with an unchanged library leaves matching files
+untouched, including their modification times.
+
+`--dry-run` lists `CREATE` and `UPDATE` actions with full playlist names,
+added/removed paths, duplicate cleanup counts, and formatting-only changes.
+It summarizes changed, unchanged, and skipped playlists. With `--prune`, it
+also lists `DELETE` actions. It does not create the output directory or write files.
 
 ### Guards
 
-- A playlist that matches **0 tracks** does **not** overwrite an existing
-  non-empty `.m3u` (folder playlists in Music.app report as empty). Pass
-  `--allow-empty` to override.
+- A non-empty Apple playlist that matches **0 tracks** does **not** overwrite
+  an existing non-empty `.m3u`. Pass `--allow-empty` to override. An explicitly
+  empty Apple playlist clears the exported tracks, leaving the header and newline.
 - Playlists that lose >50 % of their tracks are printed as `⚠` warnings for you
   to eyeball before committing.
 - `.m3u` files with no corresponding Music.app playlist are listed and left
@@ -151,11 +168,8 @@ category).
 
 ## Syncing across machines without conflicts
 
-`playlists/*.m3u` is fully rewritten on every run, on whichever machine runs
-it. Run it on two machines without pulling in between - a common case, since
-Apple Music.app's library isn't perfectly instant across devices - and a
-normal 3-way git merge conflicts on nearly every line, since almost nothing
-in two independent full rewrites lines up.
+`playlists/*.m3u` is updated only when its contents change. Edits made on two
+machines without pulling in between can still produce Git merge conflicts.
 
 `music-metadata/.gitattributes` routes `playlists/*.m3u` through a custom
 **union merge driver** (`bin/merge-m3u.py`) instead: it keeps every track

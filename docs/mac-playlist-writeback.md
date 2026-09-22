@@ -1,6 +1,10 @@
 # Mac playlist write-back
 
-Menu **3·8–3·11**.
+Menu **3·6–3·9**.
+
+The single-playlist menu actions open an `fzf` picker of existing `.m3u`
+names, including emoji. Select with Enter; Escape cancels without contacting
+Music.app. From the command line, use `--pick --dry-run` or `--pick`.
 
 ```
 bin/writeback.js          JXA - the only Music.app *write* in this repo
@@ -107,8 +111,22 @@ same default this doc always intended and the same philosophy as the
 `m3u-union` git merge driver. Auto-creates the Apple Music playlist if it
 doesn't exist yet.
 
-`--dry-run` only ever calls `writeback.js --read` - no JXA write happens on
-a dry run. Idempotent: a second run with nothing new to add writes nothing
+`--dry-run` calls the read-only `--library` and `--read` modes. It reports
+`CREATE`, `UPDATE`, `UNCHANGED`, or `BLOCKED` with full playlist names,
+the paths to add, and a summary of how many playlists would change.
+The library query ensures a file on disk is actually registered with Music.
+Duplicate catalog IDs are retained as candidates. They block only a playlist
+that needs to add that ID; unrelated duplicates and IDs already present in the
+playlist do not prevent planning. All ambiguous candidate paths are reported.
+Duplicate target playlist names are rejected rather than choosing arbitrarily.
+
+Unresolved entries or missing library tracks block that playlist and produce
+a nonzero exit status. Other valid playlists can still proceed. Additions
+preserve their order in the source M3U, with repeated IDs added only once.
+Missing empty playlists are created as empty playlists. A library rejection
+during apply is reported and produces a nonzero exit status.
+
+No JXA write happens on a dry run. Idempotent: a second run with nothing new to add writes nothing
 (verified directly: applying the same request twice reports `0 to add` /
 `already_present` the second time, track count unchanged).
 

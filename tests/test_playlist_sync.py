@@ -231,8 +231,8 @@ def test_cli_reports_phantom_not_silent_match(tmp_path, build_tree):
                         "--repo", str(repo)])
 
     assert result.returncode == 0, result.stderr
-    assert "0 matched" in result.stdout
-    assert "1 phantom" in result.stdout
+    assert "Exported file changes: add 0, delete 0" in result.stdout
+    assert "1 missing files" in result.stdout
     assert "phantom tracks" in result.stdout
 
 
@@ -261,9 +261,17 @@ def test_cli_matches_when_file_present(tmp_path, build_tree):
                         "--repo", str(repo)])
 
     assert result.returncode == 0, result.stderr
-    assert "1 matched" in result.stdout
+    assert "Exported file changes: add 1, delete 0" in result.stdout
     assert "0 phantom" not in result.stdout or "phantom" not in result.stdout.split("\n")[-3]
-    assert "--dry-run: nothing written" in result.stdout
+    assert "Apple Music: 1 tracks" in result.stdout
+
+    result = _run_cli(["--from", str(dump),
+                       "--csv", str(csv_path), "--music-root", str(root),
+                       "--repo", str(repo)])
+    assert result.returncode == 0, result.stderr
+    assert (repo / "playlists" / "Test Playlist.m3u").read_bytes() == (
+        b"#EXTM3U\nartist/album/01-title-[mid-1].mp3\n"
+    )
 
 
 def test_cli_dry_run_writes_nothing(tmp_path, build_tree):
@@ -292,3 +300,126 @@ def test_cli_dry_run_writes_nothing(tmp_path, build_tree):
 
     assert not (repo / "playlists").exists() or \
         list((repo / "playlists").glob("*.m3u")) == []
+
+
+@pytest.mark.parametrize('prior, tracks, expected', [
+    (None, ['Second', 'First', 'Second'], ['second', 'first']),
+    (['first', 'second', 'first', 'removed'], ['Second', 'Third', 'First', 'Third'],
+     ['first', 'second', 'third']),
+    (['second', 'first'], ['First', 'Second'], ['second', 'first']),
+    (['first'], [], []),
+])
+def test_cli_reconciles_existing_playlist(tmp_path, prior, tracks, expected):
+    repo = tmp_path / 'repo'
+    playlists = repo / 'playlists'
+    playlists.mkdir(parents=True)
+    dest = playlists / 'Test.m3u'
+    def render(names):
+        return '#EXTM3U\n' + ''.join(f'artist/album/{n}.mp3\n' for n in names)
+    if prior is not None:
+        dest.write_text(render(prior).rstrip('\n'), encoding='utf-8')
+    catalog = tmp_path / 'files.csv'
+    catalog.write_text('path\n' + ''.join(
+        f'artist/album/{n}.mp3\n' for n in ['first', 'second', 'third']), encoding='utf-8')
+    dump = tmp_path / 'dump.json'
+    dump.write_text(json.dumps([{'name': 'Test', 'tracks': [
+        f'/Artist/Album/{n}.mp3' for n in tracks]}]), encoding='utf-8')
+    args = ['--from', str(dump), '--csv', str(catalog), '--repo', str(repo),
+            '--music-root', '']
+    before = dest.read_bytes() if dest.exists() else None
+    result = _run_cli([*args, '--dry-run'])
+    assert result.returncode == 0, result.stderr
+    assert (dest.read_bytes() if dest.exists() else None) == before
+    assert ('New playlist: Test' if prior is None else 'Existing playlist: Test') in result.stdout
+    assert f'Apple Music: {len(tracks)} tracks' in result.stdout
+    assert f'Exported file: {len(prior or [])} tracks' in result.stdout
+    old = set(prior or [])
+    assert f'add {len(set(expected) - old)}, delete {len(prior or []) - len(old & set(expected))}' in result.stdout
+    result = _run_cli(args)
+    assert result.returncode == 0, result.stderr
+    assert dest.read_bytes() == render(expected).encode('utf-8')
+    timestamp = dest.stat().st_mtime_ns
+    result = _run_cli(args)
+    assert result.returncode == 0, result.stderr
+    assert 'wrote 0 playlist file(s), unchanged 1' in result.stdout
+    assert dest.stat().st_mtime_ns == timestamp
+    preview = _run_cli([*args, '--dry-run'])
+    assert 'Exported file changes: add 0, delete 0' in preview.stdout
+    assert 'Formatting:' not in preview.stdout
+
+
+def test_cli_preserves_existing_playlist_when_all_tracks_unmatched(tmp_path):
+    playlists = tmp_path / 'playlists'
+    playlists.mkdir()
+    dest = playlists / 'Test.m3u'
+    original = b'#EXTM3U\nartist/album/known.mp3\n'
+    dest.write_bytes(original)
+    catalog = tmp_path / 'files.csv'
+    catalog.write_text('path\nartist/album/known.mp3\n', encoding='utf-8')
+    dump = tmp_path / 'dump.json'
+    dump.write_text(json.dumps([{'name': 'Test', 'tracks': [
+        '/Artist/Album/Unknown.mp3']}]), encoding='utf-8')
+    result = _run_cli(['--from', str(dump), '--csv', str(catalog),
+                       '--repo', str(tmp_path), '--music-root', ''])
+    assert result.returncode == 0, result.stderr
+    assert dest.read_bytes() == original
+    assert 'kept existing' in result.stdout
+
+
+@pytest.mark.parametrize('dry_run', [False, True])
+def test_single_playlist_picker_scopes_export(tmp_path, monkeypatch, capsys, dry_run):
+    from unittest.mock import patch
+    name = '🎧 Dance Hindi'
+    catalog = tmp_path / 'files.csv'
+    catalog.write_text('path\n', encoding='utf-8')
+    playlists = tmp_path / 'playlists'
+    playlists.mkdir()
+    other = playlists / 'Other.m3u'
+    other.write_bytes(b'#EXTM3U\nkeep-this.mp3\n')
+    before = other.stat().st_mtime_ns
+    argv = ['playlist-sync.py', '--pick', '--repo', str(tmp_path),
+            '--csv', str(catalog), '--music-root', '']
+    if dry_run:
+        argv.append('--dry-run')
+    monkeypatch.setattr(sys, 'argv', argv)
+    with patch.object(ps, 'fetch_playlists', return_value=[
+            {'name': name, 'tracks': []}, {'name': 'Other', 'tracks': []}]), \
+         patch.object(ps.subprocess, 'run', return_value=subprocess.CompletedProcess(
+             ['fzf'], 0, name + '\0')) as picker:
+        ps.main()
+        assert name + '\0' in picker.call_args.kwargs['input']
+    assert other.read_bytes() == b'#EXTM3U\nkeep-this.mp3\n'
+    assert other.stat().st_mtime_ns == before
+    selected = playlists / f'{name}.m3u'
+    if dry_run:
+        assert not selected.exists()
+        assert f'New playlist: {name}' in capsys.readouterr().out
+    else:
+        assert selected.read_bytes() == b'#EXTM3U\n'
+
+
+def test_single_playlist_cancel_and_prune_guard(tmp_path, monkeypatch):
+    from unittest.mock import patch
+    catalog = tmp_path / 'files.csv'
+    catalog.write_text('path\n')
+    argv = ['playlist-sync.py', '--pick', '--repo', str(tmp_path),
+            '--csv', str(catalog), '--music-root', '']
+    monkeypatch.setattr(sys, 'argv', argv)
+    with patch.object(ps, 'fetch_playlists', return_value=[{'name': 'Test', 'tracks': []}]), \
+         patch.object(ps.subprocess, 'run', return_value=subprocess.CompletedProcess(['fzf'], 130, '')):
+        ps.main()
+    assert not (tmp_path / 'playlists').exists()
+    monkeypatch.setattr(sys, 'argv', [*argv, '--prune'])
+    with pytest.raises(SystemExit) as error:
+        ps.main()
+    assert error.value.code == 2
+
+
+def test_fetch_names_and_one_pass_scoped_arguments():
+    from unittest.mock import patch
+    with patch.object(ps.subprocess, 'run', return_value=subprocess.CompletedProcess(
+            [], 0, '[]')) as run:
+        ps.fetch_playlists(None, names_only=True)
+        assert run.call_args.args[0][-1] == '--names'
+        ps.fetch_playlists(None, one='🎧 Dance Hindi')
+        assert run.call_args.args[0][-2:] == ['--one', '🎧 Dance Hindi']

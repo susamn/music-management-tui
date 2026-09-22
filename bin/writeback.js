@@ -63,6 +63,9 @@ function trackLocations(tracks) {
 function findPlaylist(Music, name) {
   var pls = Music.userPlaylists;
   var names = pls.name();
+  if (names.filter(function (n) { return n === name; }).length > 1) {
+    throw new Error("Ambiguous playlist name: " + name);
+  }
   for (var i = 0; i < names.length; i++) {
     if (names[i] === name) {
       var pl = pls[i];
@@ -123,6 +126,7 @@ function doApply(Music, requestPath) {
     var idx = indexByLoc[path];
     if (idx === undefined) { notInLibrary.push(path); continue; }
     Music.duplicate(ft[idx], {to: pl});
+    already[path] = true;
     added.push(path);
   }
 
@@ -136,6 +140,9 @@ function run(argv) {
   var Music = Application("Music");
   Music.includeStandardAdditions = true;
 
+  if (argv[0] === "--library") {
+    return JSON.stringify({locations: trackLocations(Music.libraryPlaylists[0].fileTracks)});
+  }
   if (argv[0] === "--read") {
     return doRead(Music, argv[1]);
   }
