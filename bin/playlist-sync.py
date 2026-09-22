@@ -138,21 +138,22 @@ def find_match(apple_path, art_alb_trk, art_trk, prefer=frozenset()):
     album = normalize(parts[-2])
     track = clean_apple_name(parts[-1])
     apnum = apple_track_num(parts[-1])
-    for same_album, cands in ((True, art_alb_trk.get(f"{artist}|{album}|{track}")),
-                               (False, art_trk.get(f"{artist}|{track}"))):
+    for cands in (art_alb_trk.get(f"{artist}|{album}|{track}"),
+                  art_trk.get(f"{artist}|{track}")):
         if not cands:
             continue
-        if same_album and len(cands) > 1 and apnum is not None:
-            # same title appears twice on the album (e.g. reprise, two singers) -
-            # the track number is the only thing that tells them apart. Only
-            # trustworthy within one album; a number match in the album-dropped
-            # fallback below is coincidence between unrelated releases.
+        for c in cands:                 # keep the copy already in the playlist -
+            if c in prefer:             # never let a guess override an established pick
+                return c
+        if len(cands) > 1 and apnum is not None:
+            # same title appears more than once for this artist (reprise, two
+            # singers, the same song on two pressings) - the track number is
+            # usually the only thing that tells them apart, even across the
+            # album-dropped fallback (Apple's own album string often doesn't
+            # text-match the tree's for the same release)
             numbered = [c for c in cands if tree_track_num(c.rsplit("/", 1)[-1]) == apnum]
             if len(numbered) == 1:
                 return numbered[0]
-        for c in cands:                 # keep the copy already in the playlist
-            if c in prefer:
-                return c
         return cands[0]                 # else first in files.tree order (stable)
     return None
 
