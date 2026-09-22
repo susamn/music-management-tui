@@ -38,7 +38,7 @@ wiki/<artist>/<album>/<track>/        ->   MUSIC_DIR/<artist>/<album>/wiki/<trac
 That is `dirname` + `wiki/` + `basename`, which is the only place the two trees
 differ. Unlike lyrics, this is not a straight relative-path copy.
 
-`bin/wiki-push.py` — menu **4·5–4·7**, the same shape as `lyrics-push.py`:
+`bin/wiki-push.py` — menu **2·5–2·7**, the same shape as `lyrics-push.py`:
 
 ```bash
 wiki-push.py list                      # track dirs git hasn't committed yet
@@ -58,7 +58,7 @@ staged, committed or deleted; the music-metadata working tree is untouched.
 
 ## Fetching
 
-`bin/wiki-fetch.py` — menu **4·1–4·4**. Stdlib only; needs `ffprobe` on PATH.
+`bin/wiki-fetch.py` — menu **2·1–2·4**. Stdlib only; needs `ffprobe` on PATH.
 
 Every field falls down a chain of sources and takes the **first that has
 anything**. Nothing is merged, so a field always has exactly one provenance and

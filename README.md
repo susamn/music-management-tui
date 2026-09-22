@@ -31,16 +31,12 @@ command), `t` for the theme, `0` to quit.
 
 | # | section | what |
 |---|---|---|
-| 1 | Lyrics — sync & report | `lrc-sync` hand-timing, refresh the still-missing lists, browse them |
-| 2 | Lyrics — fetch from LRCLIB | plain `.txt` / synced `.lrc` / word-synced `.elrc`, whole tree or one sub-path |
-| 3 | Lyrics — push | uncommitted lyrics → next to the mp3 or to Google Drive; or push a past commit's lyrics to Drive (with a pushed-commit ledger) |
-| 4 | Wiki — track stories | fetch per-track background from online sources, push into the music collection |
-| 5 | Playlists & play-stats | regenerate `playlists/*.m3u` and `play_stats.csv` from Apple Music.app; regenerate `files.csv` from `$GDRIVE_MUSIC_DIR` |
-| 6 | mpdtui DB — read | summary, browse by rating / mark / tag, orphan rows |
-| 7 | mpdtui DB — diff | vs the music library, vs `play_stats.csv` |
-| 8 | mpdtui DB — write | backup/restore, marks, tags, import ratings, prune — dry-run + backup first |
-| 9 | MCATALOGID tagging | backfill missing `MCATALOGID` tags from filenames, assign new ids for tracks with none |
-| 10 | Settings | show / edit the config |
+| 1 | Lyrics | hand-time `.lrc`, fetch from LRCLIB (`.txt`/`.lrc`/`.elrc`), refresh/browse the still-missing report, push to the music dir or Drive (uncommitted or a past commit, with a pushed-commit ledger) |
+| 2 | Wiki | fetch per-track background from online sources, push into the music collection |
+| 3 | Apple Music Sync | regenerate `playlists/*.m3u` and `play_stats.csv` from Apple Music.app; regenerate `files.csv` from `$GDRIVE_MUSIC_DIR` |
+| 4 | MCATALOGID | status, backfill missing tags from filenames, assign new ids for tracks with none |
+| 5 | mpdtui | summary, browse (by rating/mark/tag), orphans, diff vs library/play_stats, backup/restore, marks, tags, import ratings, prune |
+| 6 | Settings | show / edit the config |
 
 ## Docs
 

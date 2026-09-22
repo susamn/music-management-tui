@@ -1,7 +1,7 @@
 # playlist-sync
 
 Regenerate `$MUSIC_METADATA_DIR/playlists/*.m3u` from Apple Music.app.
-Menu **5·1 / 5·2 / 5·3** (files.csv generation: **5·6 / 5·7**).
+Menu **3·1 / 3·2 / 3·3** (Apple Music Sync; files.csv generation: **3·6 / 3·7**).
 
 ```
 bin/fetch.js              JXA - dumps every Music.app user playlist (name + track paths) as JSON
@@ -140,7 +140,7 @@ byte-for-byte identically.
 
 - Tracks absent from `files.csv` - spa/meditation music, spoken word, or
   anything added to the library since the last regenerate. Run
-  **5·6/5·7** (`bin/generate-files-csv.py`) to pick these up; unlike the old
+  **3·6/3·7** (`bin/generate-files-csv.py`) to pick these up; unlike the old
   `files.tree`, this doesn't require a different machine.
 - Apple's `_` stand-in for `:` `/` `'` in a few names (`A Hard Day_s Night`).
 - Heavy classical/raga naming (`Indian Classical`, `Thumri`) - check these by

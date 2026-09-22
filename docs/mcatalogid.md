@@ -3,7 +3,7 @@
 A custom tag (`TXXX:mcatalogid` on mp3, `----:com.apple.iTunes:mcatalogid`
 freeform atom on m4a, a Vorbis comment on flac) that identifies a track
 independent of its path, so playlists can be regrouped after a move to a new
-machine even if filenames or folders change. Menu **9·1–9·2**.
+machine even if filenames or folders change. Menu **4·1–4·3**.
 
 ```
 bin/mcatalogid-backfill.py   fills in a missing tag on $GDRIVE_MUSIC_DIR - ongoing

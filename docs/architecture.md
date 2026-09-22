@@ -95,14 +95,12 @@ tools, not under `$TOOLS_PATH`.
 
 | section | items | scripts |
 |---|---|---|
-| 1 Lyrics — sync & report | lrc-sync, refresh reports, browse missing | `lrc-sync.py`, `refresh-reports.py` |
-| 2 Lyrics — fetch from LRCLIB | plain / lrc / elrc / one sub-path | `fetch-lyrics.py` |
-| 3 Lyrics — push | uncommitted → music dir / Drive; recent commits → Drive (ledger) | `lyrics-push.py` |
-| 4 Playlists & play-stats | playlist-sync live/dump/dry, play-stats live/dry | `playlist-sync.py`, `play-stats-sync.py` |
-| 5 mpdtui DB — read | summary, browse, 5★, orphans | `mpdtui.py` |
-| 6 mpdtui DB — diff | vs library, vs play_stats | `mpdtui.py` |
-| 7 mpdtui DB — write | backup/restore, mark, tag, import ratings, prune | `mpdtui.py`, `mpdtui-db-backup.sh` |
-| 8 Settings | show config, edit config | `show-config.sh` |
+| 1 Lyrics | lrc-sync, refresh/browse missing, fetch (plain/lrc/elrc/one sub-path), push (uncommitted or past commits → music dir / Drive, ledger) | `lrc-sync.py`, `refresh-reports.py`, `fetch-lyrics.py`, `lyrics-push.py` |
+| 2 Wiki | fetch/retry batches, push to music dir / Drive | `wiki-fetch.py`, `wiki-push.py` |
+| 3 Apple Music Sync | playlist-sync live/dump/dry, play-stats live/dry, regenerate files.csv | `playlist-sync.py`, `play-stats-sync.py`, `generate-files-csv.py` |
+| 4 MCATALOGID | status, backfill/assign dry-run and real | `mcatalogid-backfill.py` |
+| 5 mpdtui | summary, browse, 5★, orphans, diff vs library/play_stats, backup/restore, mark, tag, import ratings, prune | `mpdtui.py`, `mpdtui-db-backup.sh` |
+| 6 Settings | show config, edit config | `show-config.sh` |
 
 ## Future
 

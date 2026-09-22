@@ -43,7 +43,7 @@ pl.move(pl.tracks[i], {to: pl.tracks[j]})            // reorder (fiddly; often
 ## Suggested shape
 
 - `bin/playlist-writeback.py` + `bin/writeback.js` (JXA helper), new items under
-  menu section 4.
+  menu section 3 (Apple Music Sync).
 - **Additive-first**: default to "add tracks in the `.m3u` that Music's playlist
   lacks", never delete, print a diff and confirm. Full reconciliation
   (removals + order) behind an explicit flag.

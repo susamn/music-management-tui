@@ -4,7 +4,7 @@ Snapshot **rating** and **play count** for every track in Apple Music.app
 (`Music.app`) into a CSV, and keep that CSV up to date by re-running one
 command. Read-only against Music.app — it never changes your library.
 
-Menu **4·4 / 4·5**.
+Menu **3·4 / 3·5** (Apple Music Sync).
 
 ```
 bin/extract.js          JXA - dumps a fresh snapshot of Music.app as CSV to stdout

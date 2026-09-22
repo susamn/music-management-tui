@@ -4,184 +4,174 @@
   "clamp_threshold": 10,
   "sections": [
     {
-      "title": "Lyrics — sync & report",
+      "title": "Lyrics",
       "items": [
         {
           "key": "1",
-          "label": "lrc-sync — hand-time .txt into .lrc against MPD",
+          "label": "Hand-sync a .lrc",
           "cmd": "python3 \"$SELF/bin/lrc-sync.py\"",
           "interactive": true
         },
         {
           "key": "2",
-          "label": "Refresh coverage reports (still-missing lists)",
+          "label": "Refresh missing-lyrics report",
           "cmd": "python3 \"$SELF/bin/refresh-reports.py\""
         },
         {
           "key": "3",
-          "label": "Browse still-missing songs",
+          "label": "Browse missing lyrics",
           "cmd": "cat \"$MUSIC_METADATA_DIR/lyrics-reports/still_missing_songs.txt\"",
           "use_fzf": true
-        }
-      ]
-    },
-    {
-      "title": "Lyrics — fetch from LRCLIB",
-      "items": [
+        },
         {
-          "key": "1",
-          "label": "Fetch plain .txt for tracks missing it",
+          "key": "4",
+          "label": "Fetch plain lyrics",
           "cmd": "python3 \"$SELF/bin/fetch-lyrics.py\" --kind plain --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\"",
           "interactive": true
         },
         {
-          "key": "2",
-          "label": "Fetch synced .lrc for tracks missing it",
+          "key": "5",
+          "label": "Fetch synced lyrics (.lrc)",
           "cmd": "python3 \"$SELF/bin/fetch-lyrics.py\" --kind lrc --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\"",
           "interactive": true
         },
         {
-          "key": "3",
-          "label": "Fetch word-synced .elrc (A2) where available",
+          "key": "6",
+          "label": "Fetch word-synced lyrics (.elrc)",
           "cmd": "python3 \"$SELF/bin/fetch-lyrics.py\" --kind elrc --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\"",
           "interactive": true
         },
         {
-          "key": "4",
-          "label": "Fetch .txt for one sub-path (prompts)",
+          "key": "7",
+          "label": "Fetch lyrics for one folder",
           "cmd": "read -rp 'sub-path under music dir (e.g. adele/25): ' p && python3 \"$SELF/bin/fetch-lyrics.py\" --kind plain --music \"$MUSIC_DIR\" --out \"$MUSIC_METADATA_DIR/lyrics\" --only \"$p\"",
           "interactive": true
-        }
-      ]
-    },
-    {
-      "title": "Lyrics — push to music dir / Drive",
-      "items": [
+        },
         {
-          "key": "1",
-          "label": "List lyrics git hasn't committed yet",
+          "key": "8",
+          "label": "List unpushed lyrics",
           "cmd": "python3 \"$SELF/bin/lyrics-push.py\" list"
         },
         {
-          "key": "2",
-          "label": "Pick some → copy next to the mp3 (for sync testing)",
+          "key": "9",
+          "label": "Push lyrics to music dir",
           "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" list | fzf -m --prompt='to music> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" to-music",
           "interactive": true
         },
         {
-          "key": "3",
-          "label": "Pick some → push to Google Drive (rclone)",
+          "key": "10",
+          "label": "Push lyrics to Drive",
           "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" list | fzf -m --prompt='to drive> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" to-drive",
           "interactive": true
         },
         {
-          "key": "4",
-          "label": "Pick some → push to Google Drive — dry run",
+          "key": "11",
+          "label": "Push lyrics to Drive — dry run",
           "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" list | fzf -m --prompt='to drive> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" to-drive --dry-run",
           "interactive": true
         },
         {
-          "key": "5",
-          "label": "List recent lyrics commits (+ pushed-to-Drive status)",
+          "key": "12",
+          "label": "Recent lyrics commits",
           "cmd": "python3 \"$SELF/bin/lyrics-push.py\" commits -n 5",
           "use_fzf": true
         },
         {
-          "key": "6",
-          "label": "Pick past commits → push their lyrics to Google Drive",
+          "key": "13",
+          "label": "Push past commits to Drive",
           "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" commits -n 5 | fzf -m --prompt='push commit> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" push-commits",
           "interactive": true
         },
         {
-          "key": "7",
-          "label": "Pick past commits → push to Google Drive — dry run",
+          "key": "14",
+          "label": "Push past commits to Drive — dry run",
           "cmd": "sel=$(python3 \"$SELF/bin/lyrics-push.py\" commits -n 5 | fzf -m --prompt='push commit> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/lyrics-push.py\" push-commits --dry-run",
           "interactive": true
         }
       ]
     },
     {
-      "title": "Wiki — track stories",
+      "title": "Wiki",
       "items": [
         {
           "key": "1",
-          "label": "Preview the next batch (dry run, no network writes)",
+          "label": "Preview next batch — dry run",
           "cmd": "python3 \"$SELF/bin/wiki-fetch.py\" --dry-run",
           "interactive": true
         },
         {
           "key": "2",
-          "label": "Fetch the next batch ($WIKI_BATCH tracks)",
+          "label": "Fetch next batch",
           "cmd": "python3 \"$SELF/bin/wiki-fetch.py\"",
           "interactive": true
         },
         {
           "key": "3",
-          "label": "Fetch one sub-path (prompts)",
+          "label": "Fetch one folder",
           "cmd": "read -rp 'sub-path under music dir (e.g. sade/the-best-of-sade): ' p && python3 \"$SELF/bin/wiki-fetch.py\" --only \"$p\"",
           "interactive": true
         },
         {
           "key": "4",
-          "label": "Retry tracks previously found to have no data",
+          "label": "Retry tracks with no data",
           "cmd": "python3 \"$SELF/bin/wiki-fetch.py\" --retry-missing",
           "interactive": true
         },
         {
           "key": "5",
-          "label": "List wiki git hasn't committed yet",
+          "label": "List unpushed wiki",
           "cmd": "python3 \"$SELF/bin/wiki-push.py\" list"
         },
         {
           "key": "6",
-          "label": "Pick some → copy into the music dir (for mpdtui)",
+          "label": "Push wiki to music dir",
           "cmd": "sel=$(python3 \"$SELF/bin/wiki-push.py\" list | fzf -m --prompt='to music> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/wiki-push.py\" to-music",
           "interactive": true
         },
         {
           "key": "7",
-          "label": "Pick some → push to Google Drive (rclone)",
+          "label": "Push wiki to Drive",
           "cmd": "sel=$(python3 \"$SELF/bin/wiki-push.py\" list | fzf -m --prompt='to drive> ') && [ -n \"$sel\" ] && printf '%s\\n' \"$sel\" | python3 \"$SELF/bin/wiki-push.py\" to-drive",
           "interactive": true
         }
       ]
     },
     {
-      "title": "Playlists & play-stats (Apple Music)",
+      "title": "Apple Music Sync",
       "items": [
         {
           "key": "1",
-          "label": "Playlist sync — live from Music.app",
+          "label": "Sync playlists — live",
           "cmd": "python3 \"$SELF/bin/playlist-sync.py\"",
           "interactive": true
         },
         {
           "key": "2",
-          "label": "Playlist sync — from a saved dump (prompts)",
+          "label": "Sync playlists — from a dump",
           "cmd": "read -rp 'fetch.js dump path: ' f && python3 \"$SELF/bin/playlist-sync.py\" --from \"$f\"",
           "interactive": true
         },
         {
           "key": "3",
-          "label": "Playlist sync — dry run (live)",
+          "label": "Sync playlists — dry run",
           "cmd": "python3 \"$SELF/bin/playlist-sync.py\" --dry-run",
           "interactive": true
         },
         {
           "key": "4",
-          "label": "Play-stats sync — live from Music.app",
+          "label": "Sync play stats — live",
           "cmd": "python3 \"$SELF/bin/play-stats-sync.py\"",
           "interactive": true
         },
         {
           "key": "5",
-          "label": "Play-stats sync — dry run",
+          "label": "Sync play stats — dry run",
           "cmd": "python3 \"$SELF/bin/play-stats-sync.py\" --dry-run",
           "interactive": true
         },
         {
           "key": "6",
-          "label": "Regenerate files.csv from $GDRIVE_MUSIC_DIR",
+          "label": "Regenerate files.csv",
           "cmd": "python3 \"$SELF/bin/generate-files-csv.py\"",
           "interactive": true
         },
@@ -193,16 +183,37 @@
       ]
     },
     {
-      "title": "mpdtui DB — read",
+      "title": "MCATALOGID",
       "items": [
         {
           "key": "1",
-          "label": "Summary (counts, marks, tags)",
+          "label": "Status",
+          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --status --root \"$GDRIVE_MUSIC_DIR\""
+        },
+        {
+          "key": "2",
+          "label": "Dry run",
+          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --dry-run --root \"$GDRIVE_MUSIC_DIR\""
+        },
+        {
+          "key": "3",
+          "label": "Run",
+          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --root \"$GDRIVE_MUSIC_DIR\"",
+          "interactive": true
+        }
+      ]
+    },
+    {
+      "title": "mpdtui",
+      "items": [
+        {
+          "key": "1",
+          "label": "Summary",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" summary"
         },
         {
           "key": "2",
-          "label": "Browse tracks (id, rating, marks, path)",
+          "label": "Browse tracks",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" list",
           "use_fzf": true
         },
@@ -214,84 +225,53 @@
         },
         {
           "key": "4",
-          "label": "Orphan rows (file gone)",
+          "label": "Orphan rows",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" orphans"
-        }
-      ]
-    },
-    {
-      "title": "mpdtui DB — diff",
-      "items": [
+        },
         {
-          "key": "1",
-          "label": "vs music library (orphans / drift)",
+          "key": "5",
+          "label": "Diff vs library",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" diff-library"
         },
         {
-          "key": "2",
-          "label": "vs play_stats.csv (ratings / play counts)",
+          "key": "6",
+          "label": "Diff vs play stats",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" diff-stats"
-        }
-      ]
-    },
-    {
-      "title": "mpdtui DB — write (backup taken first)",
-      "items": [
+        },
         {
-          "key": "1",
-          "label": "Backup DB to rclone remote",
+          "key": "7",
+          "label": "Backup DB",
           "cmd": "bash \"$SELF/bin/mpdtui-db-backup.sh\" backup",
           "interactive": true
         },
         {
-          "key": "2",
-          "label": "Restore DB from rclone remote",
+          "key": "8",
+          "label": "Restore DB",
           "cmd": "bash \"$SELF/bin/mpdtui-db-backup.sh\" restore",
           "interactive": true
         },
         {
-          "key": "3",
-          "label": "Add a mark to picked tracks",
+          "key": "9",
+          "label": "Add a mark",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" marks; read -rp 'mark id or name: ' m && python3 \"$SELF/bin/mpdtui.py\" list | fzf -m --prompt='mark> ' | python3 \"$SELF/bin/mpdtui.py\" mark --add \"$m\" --apply",
           "interactive": true
         },
         {
-          "key": "4",
-          "label": "Add a tag to picked tracks",
+          "key": "10",
+          "label": "Add a tag",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" tags; read -rp 'tag name: ' t && python3 \"$SELF/bin/mpdtui.py\" list | fzf -m --prompt='tag> ' | python3 \"$SELF/bin/mpdtui.py\" tag --add \"$t\" --apply",
           "interactive": true
         },
         {
-          "key": "5",
-          "label": "Import ratings from play_stats.csv",
+          "key": "11",
+          "label": "Import ratings",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" import-ratings --apply",
           "interactive": true
         },
         {
-          "key": "6",
-          "label": "Prune orphan rows",
+          "key": "12",
+          "label": "Prune orphans",
           "cmd": "python3 \"$SELF/bin/mpdtui.py\" prune --apply",
-          "interactive": true
-        }
-      ]
-    },
-    {
-      "title": "MCATALOGID tagging",
-      "items": [
-        {
-          "key": "1",
-          "label": "Status: how many tagged, how many missing",
-          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --status --root \"$GDRIVE_MUSIC_DIR\""
-        },
-        {
-          "key": "2",
-          "label": "Dry-run: backfill from filename + assign new ids",
-          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --dry-run --root \"$GDRIVE_MUSIC_DIR\""
-        },
-        {
-          "key": "3",
-          "label": "Run for real (writes tags, never renames files)",
-          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --root \"$GDRIVE_MUSIC_DIR\"",
           "interactive": true
         }
       ]
@@ -301,12 +281,12 @@
       "items": [
         {
           "key": "1",
-          "label": "Show resolved config + path checks",
+          "label": "Show config",
           "cmd": "bash \"$SELF/bin/show-config.sh\""
         },
         {
           "key": "2",
-          "label": "Edit config ($EDITOR)",
+          "label": "Edit config",
           "cmd": "${EDITOR:-vi} \"${XDG_CONFIG_HOME:-$HOME/.config}/music-tui/config\"",
           "interactive": true
         }
