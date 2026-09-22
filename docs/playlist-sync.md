@@ -117,7 +117,9 @@ Ported from the Swift tool, plus an NFC fix. For each Apple path
 | tree filename | drop extension, strip `-[mid-…]` suffix and leading `D-NN-` / `NN-` |
 | lookup 1 | `artist \| album \| track` |
 | lookup 2 | `artist \| track` (album dropped - handles truncated album dirs) |
-| tie-break | if several tree files match, keep the one already in that `.m3u` (stable diffs), else first in `files.csv` order |
+| tie-break 1 | if several tree files match, keep the one already in that `.m3u` (stable diffs) - an established pick always wins, even over a plausible-looking track number |
+| tie-break 2 | otherwise, if exactly one of them has the same track number as the Apple file (compared as integers, ignoring zero-padding), use that - same title appears more than once for this artist (a reprise, two singers, the same song on two pressings), and the number is usually the only thing that tells them apart, even across lookup 2 where the album string itself doesn't text-match |
+| tie-break 3 | otherwise, first in `files.csv` order |
 | existence check | a match not actually present under `$GDRIVE_MUSIC_DIR` (or `--music-root`) is a `phantom`, not a silent match - `files.csv` is a snapshot and can go stale between generation and use |
 | dedupe | each resolved repo path written once per playlist (see "No duplicate tracks" above) |
 
