@@ -269,11 +269,16 @@
       "items": [
         {
           "key": "1",
+          "label": "Status: how many tagged, how many missing",
+          "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --status --root \"$GDRIVE_MUSIC_DIR\""
+        },
+        {
+          "key": "2",
           "label": "Dry-run: backfill from filename + assign new ids",
           "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --dry-run --root \"$GDRIVE_MUSIC_DIR\""
         },
         {
-          "key": "2",
+          "key": "3",
           "label": "Run for real (writes tags, never renames files)",
           "cmd": "python3 \"$SELF/bin/mcatalogid-backfill.py\" --root \"$GDRIVE_MUSIC_DIR\"",
           "interactive": true

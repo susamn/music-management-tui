@@ -119,6 +119,9 @@ def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--status", action="store_true",
+                     help="report tagged/missing counts only, write nothing, "
+                          "no per-file plan")
     ap.add_argument("--root", default=_ROOT_DEFAULT,
                      help="music dir to scan (default: $GDRIVE_MUSIC_DIR)")
     args = ap.parse_args()
@@ -146,19 +149,45 @@ def main():
                 global_max = max(global_max, int(candidate))
 
     backfill, assign, conflicts, already_ok = [], [], [], 0
+    by_ext = {}  # ext -> [tagged, missing]
     for path, current, filename_id in rows:
         if isinstance(current, str) and current.startswith("__ERROR__:"):
             continue
+        ext = path.suffix.lower()
+        counts = by_ext.setdefault(ext, [0, 0])
         if is_real(current):
             if filename_id and current != filename_id:
                 conflicts.append((path, current, filename_id))
             else:
                 already_ok += 1
+                counts[0] += 1
             continue
+        counts[1] += 1
         if filename_id:
             backfill.append((path, filename_id))
         else:
             assign.append(path)  # value decided below, in stable path order
+
+    if args.status:
+        rows_out = [
+            ("total audio files:", len(rows)),
+            ("tagged (real id):", already_ok),
+            ("missing:", len(backfill) + len(assign)),
+            ("  backfillable from filename:", len(backfill)),
+            ("  needs a brand-new id:", len(assign)),
+            ("conflicts (tag != filename):", len(conflicts)),
+        ]
+        width = max(len(label) for label, _ in rows_out) + 2
+        print(f"\nMCATALOGID status for {root}\n")
+        for label, value in rows_out:
+            print(f"{label:<{width}}{value}")
+        print()
+        for ext in sorted(by_ext):
+            tagged, missing = by_ext[ext]
+            total = tagged + missing
+            pct = f"{100 * tagged / total:.1f}%" if total else "n/a"
+            print(f"  {ext:6}{tagged:6} tagged / {total:6} total  ({pct})")
+        return 0
 
     next_id = global_max + 1
     assign_plan = []
