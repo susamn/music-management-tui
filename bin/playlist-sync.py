@@ -84,18 +84,18 @@ def clean_tree_name(filename):
 
 
 def apple_track_num(filename):
-    """The track number an Apple filename starts with ('1-02 Foo.mp3' -> '02'), or None."""
+    """The track number an Apple filename starts with ('1-02 Foo.mp3' -> 2), or None."""
     name = filename.rsplit(".", 1)[0] if "." in filename else filename
     m = _apple_num_cap.match(name)
-    return m.group(1) if m else None
+    return int(m.group(1)) if m else None
 
 
 def tree_track_num(filename):
-    """The track number a tree filename starts with ('02-foo-[mid-1].mp3' -> '02'), or None."""
+    """The track number a tree filename starts with ('4-foo-[mid-1].mp3' -> 4), or None."""
     name = filename.rsplit(".", 1)[0] if "." in filename else filename
     name = _tree_mid.sub("", name)
     m = _tree_num_cap.match(name)
-    return m.group(1) if m else None
+    return int(m.group(1)) if m else None
 
 
 def parse_tree(path):
@@ -138,13 +138,15 @@ def find_match(apple_path, art_alb_trk, art_trk, prefer=frozenset()):
     album = normalize(parts[-2])
     track = clean_apple_name(parts[-1])
     apnum = apple_track_num(parts[-1])
-    for cands in (art_alb_trk.get(f"{artist}|{album}|{track}"),
-                  art_trk.get(f"{artist}|{track}")):
+    for same_album, cands in ((True, art_alb_trk.get(f"{artist}|{album}|{track}")),
+                               (False, art_trk.get(f"{artist}|{track}"))):
         if not cands:
             continue
-        if len(cands) > 1 and apnum is not None:
+        if same_album and len(cands) > 1 and apnum is not None:
             # same title appears twice on the album (e.g. reprise, two singers) -
-            # the track number is the only thing that tells them apart
+            # the track number is the only thing that tells them apart. Only
+            # trustworthy within one album; a number match in the album-dropped
+            # fallback below is coincidence between unrelated releases.
             numbered = [c for c in cands if tree_track_num(c.rsplit("/", 1)[-1]) == apnum]
             if len(numbered) == 1:
                 return numbered[0]
