@@ -30,6 +30,7 @@ import argparse
 import csv
 import os
 import sys
+import unicodedata
 from pathlib import Path
 
 try:
@@ -85,10 +86,16 @@ def scan(root):
     for path in sorted(root.rglob("*")):
         if not path.is_file() or path.suffix.lower() not in EXTS:
             continue
-        rel = path.relative_to(root)
-        parts = rel.parts
+        # macOS/APFS hands back NFD for any filename with a decomposable
+        # character (accents etc) - fold to NFC so `path` always matches the
+        # form playlists/*.m3u and everything else already uses (same fix
+        # playlist-sync.py's normalize() applies for its own match keys; this
+        # is the raw stored path, not just a lookup key, so it has to be
+        # right here at the source).
+        rel = unicodedata.normalize("NFC", path.relative_to(root).as_posix())
+        parts = rel.split("/")
         yield {
-            "path": rel.as_posix(),
+            "path": rel,
             "artist": parts[0] if len(parts) >= 2 else "",
             "album": parts[1] if len(parts) >= 3 else "",
             "filename": parts[-1],

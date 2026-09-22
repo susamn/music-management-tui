@@ -72,6 +72,7 @@ is substituted; the `$VARS` in each `cmd` are expanded by the engine's
 | `refresh-reports.py` | `lyrics-reports/refresh.py` | `meta_genre.json` + lyrics on disk | `still_missing_*` + `README.md` in the reports dir | `$MUSIC_METADATA_DIR` |
 | `generate-files-csv.py` | new | a music dir (default `$GDRIVE_MUSIC_DIR`) | `files.csv` | `--root`/`--out`, `$GDRIVE_MUSIC_DIR`/`$FILES_CSV` |
 | `playlist-sync.py` + `fetch.js` | `playlist-sync/` | Music.app (or a dump) + `files.csv` | `playlists/*.m3u` | `$MUSIC_METADATA_DIR` / `$FILES_CSV` / `$GDRIVE_MUSIC_DIR` |
+| `playlist-writeback.py` + `writeback.js` | new | `playlists/*.m3u` + `files.csv` | tracks added to Apple Music.app playlists (the only Music.app *write* in this repo) | `$MUSIC_METADATA_DIR` / `$FILES_CSV` / `$APPLE_MUSIC_DIR` |
 | `play-stats-sync.py` + `extract.js` | `play-stats/` | Music.app | merged `play_stats.csv` | `$PLAY_STATS_CSV` |
 | `mpdtui.py` | new | `mpdtui.db` (+ library, + `play_stats.csv`) | reports / diffs / DB edits | `$MPDTUI_DB` / `$MUSIC_DIR` / `$PLAY_STATS_CSV` |
 | `mpdtui-db-backup.sh` | dotfiles, verbatim | `mpdtui.db` | rclone remote snapshot | `$MPDTUI_DB` |

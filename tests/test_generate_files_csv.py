@@ -93,6 +93,36 @@ def test_scan_includes_mcatalogid(build_tree):
     assert rows[0]["mcatalogid"] == "999"
 
 
+def test_scan_normalizes_path_to_nfc(tmp_path):
+    # macOS/APFS hands back NFD for any filename with a decomposable
+    # character - a real "café" directory created directly (bypassing
+    # build_tree, which doesn't exercise this) reproduces it: the OS stores
+    # "e" + combining acute accent, not the precomposed "é". files.csv's
+    # `path` must still come out NFC, matching playlists/*.m3u and
+    # everything else - this was a real bug found via real playlist data,
+    # not a hypothetical.
+    import subprocess
+    import unicodedata
+
+    nfd_name = unicodedata.normalize("NFD", "café")
+    root = tmp_path / "root"
+    (root / "various-artists" / nfd_name).mkdir(parents=True)
+
+    # build a tiny real mp3 without the build_tree fixture, since that
+    # fixture's own paths never contain an accented character
+    target = root / "various-artists" / nfd_name / "track.mp3"
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+         "anullsrc=r=8000:cl=mono", "-t", "1", "-c:a", "libmp3lame", str(target)],
+        check=True,
+    )
+
+    rows = list(gc.scan(root))
+    assert len(rows) == 1
+    assert rows[0]["path"] == unicodedata.normalize("NFC", rows[0]["path"])
+    assert "café" in rows[0]["path"]  # precomposed form, not decomposed
+
+
 # --- main(): dry-run vs real write, atomic write, CSV correctness ----------
 
 def _run_cli(args):

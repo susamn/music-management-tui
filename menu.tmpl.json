@@ -179,6 +179,30 @@
           "key": "7",
           "label": "Regenerate files.csv — dry run",
           "cmd": "python3 \"$SELF/bin/generate-files-csv.py\" --dry-run"
+        },
+        {
+          "key": "8",
+          "label": "Writeback one playlist — dry run",
+          "cmd": "read -rp 'playlist name (matches a playlists/<name>.m3u): ' p && python3 \"$SELF/bin/playlist-writeback.py\" --one \"$p\" --dry-run",
+          "interactive": true
+        },
+        {
+          "key": "9",
+          "label": "Writeback one playlist — apply",
+          "cmd": "read -rp 'playlist name (matches a playlists/<name>.m3u): ' p && python3 \"$SELF/bin/playlist-writeback.py\" --one \"$p\"",
+          "interactive": true
+        },
+        {
+          "key": "10",
+          "label": "Writeback all playlists — dry run",
+          "cmd": "python3 \"$SELF/bin/playlist-writeback.py\" --all --dry-run",
+          "interactive": true
+        },
+        {
+          "key": "11",
+          "label": "Writeback all playlists — apply",
+          "cmd": "python3 \"$SELF/bin/playlist-writeback.py\" --all",
+          "interactive": true
         }
       ]
     },

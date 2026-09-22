@@ -33,7 +33,7 @@ command), `t` for the theme, `0` to quit.
 |---|---|---|
 | 1 | Lyrics | hand-time `.lrc`, fetch from LRCLIB (`.txt`/`.lrc`/`.elrc`), refresh/browse the still-missing report, push to the music dir or Drive (uncommitted or a past commit, with a pushed-commit ledger) |
 | 2 | Wiki | fetch per-track background from online sources, push into the music collection |
-| 3 | Apple Music Sync | regenerate `playlists/*.m3u` and `play_stats.csv` from Apple Music.app; regenerate `files.csv` from `$GDRIVE_MUSIC_DIR` |
+| 3 | Apple Music Sync | regenerate `playlists/*.m3u` and `play_stats.csv` from Apple Music.app; regenerate `files.csv` from `$GDRIVE_MUSIC_DIR`; write `.m3u` additions back into Apple Music.app, matched by `MCATALOGID` |
 | 4 | MCATALOGID | status, backfill missing tags from filenames, assign new ids for tracks with none |
 | 5 | mpdtui | summary, browse (by rating/mark/tag), orphans, diff vs library/play_stats, backup/restore, marks, tags, import ratings, prune |
 | 6 | Settings | show / edit the config |
@@ -44,7 +44,7 @@ command), `t` for the theme, `0` to quit.
 - [`docs/lrc-sync.md`](docs/lrc-sync.md) · [`docs/lyrics-reports.md`](docs/lyrics-reports.md) · [`docs/playlist-sync.md`](docs/playlist-sync.md) · [`docs/play-stats.md`](docs/play-stats.md)
 - [`docs/mpdtui-db.md`](docs/mpdtui-db.md) — read / diff / write the mpdtui database
 - [`docs/push-to-drive.md`](docs/push-to-drive.md) — where pushed lyrics land
-- [`docs/mac-playlist-writeback.md`](docs/mac-playlist-writeback.md) — future: `.m3u` edits → Apple Music.app
+- [`docs/mac-playlist-writeback.md`](docs/mac-playlist-writeback.md) — `.m3u` edits → Apple Music.app, matched by `MCATALOGID`
 - [`docs/mcatalogid.md`](docs/mcatalogid.md) — the `MCATALOGID` tag: backfill, new-id assignment, one-time Apple Music sync
 
 ## Layout
@@ -61,15 +61,16 @@ See [`docs/architecture.md`](docs/architecture.md).
 ## Requirements
 
 Python 3 stdlib only, except `bin/mcatalogid-backfill.py`,
-`bin/apple-music-tag-sync.py`, and `bin/generate-files-csv.py`, which need
-`mutagen` (`pip install --user mutagen`) to edit ID3/MP4 tags (or, for the
-last one, just read them) in place without touching audio data —
-`ffmpeg -c copy -metadata ...` was tested and found to silently truncate a
-real file on an unusual mp3 stream, so it's never used for tag writes.
+`bin/apple-music-tag-sync.py`, `bin/generate-files-csv.py`, and
+`bin/playlist-writeback.py`, which need `mutagen` (`pip install --user
+mutagen`) to edit ID3/MP4 tags (or, for the read-only ones, just read them)
+in place without touching audio data — `ffmpeg -c copy -metadata ...` was
+tested and found to silently truncate a real file on an unusual mp3 stream,
+so it's never used for tag writes.
 `fzf`, `sqlite3`, `rclone`, `ffprobe` for some items (the menu checks and
 tells you). The Apple Music items (`playlist-sync`, `play-stats` live fetch,
-`apple-music-tag-sync`) need macOS + Music.app; `playlist-sync`'s `--from` /
-merge modes work anywhere.
+`apple-music-tag-sync`, `playlist-writeback`) need macOS + Music.app;
+`playlist-sync`'s `--from` / merge modes work anywhere.
 
 ## Tests
 
